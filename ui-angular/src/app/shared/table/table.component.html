@@ -1,0 +1,36 @@
+<div class="d-flex">
+  <table class="table table-bordered table-striped" cdk-table [dataSource]="dataSource">
+    <ng-container *ngFor="let col of displayColumns" [cdkColumnDef]="col.name">
+      <th cdk-header-cell *cdkHeaderCellDef>{{col.header}}</th>
+      <td cdk-cell *cdkCellDef="let element">
+        <ng-container [ngSwitch]="col.type">
+          <ng-container *ngSwitchCase="'number'">
+            {{element[col.name]}}
+          </ng-container>
+          <ng-container *ngSwitchCase="'language'">
+            {{element[col.name].name}}
+          </ng-container>
+          <ng-container *ngSwitchDefault>
+            {{element[col.name]}}
+          </ng-container>
+        </ng-container>
+      </td>
+    </ng-container>
+    <tr cdk-header-row *cdkHeaderRowDef="columns"></tr>
+    <tr cdk-row *cdkRowDef="let row; columns: columns;"></tr>
+  </table>
+</div>
+<div class="d-flex">
+  <label for="pageSizeLbl" class="flex-column col-form-label me-1">Page Size:</label>
+  <div class="flex-column me-2">
+    <select class="form-select" id="pageSizeLbl" [(ngModel)]="page.size" (change)="onPageSizeChange($event)">
+      <option *ngFor="let num of pageNumbers" [value]="num">{{num}}</option>
+    </select>
+  </div>
+  <div class="flex-grow-1">
+    <pagination [boundaryLinks]="true" [totalItems]="total" previousText="&lsaquo;" nextText="&rsaquo;"
+                firstText="&laquo;" lastText="&raquo;" [itemsPerPage]="page.size" [maxSize]="5"
+                (pageChanged)="onPageChange($event)">
+    </pagination>
+  </div>
+</div>

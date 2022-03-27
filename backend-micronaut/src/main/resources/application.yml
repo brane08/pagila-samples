@@ -1,0 +1,28 @@
+micronaut:
+  application:
+    name: micronaut-pagila
+  server:
+    port: 8001
+    cors:
+      enabled: true
+datasources:
+  default:
+    url: jdbc:postgresql://localhost:5432/pagila
+    driverClassName: org.postgresql.Driver
+    username: postgres
+    password: ""
+    maximum-pool-size: 7
+    minimum-idle: 3
+jpa:
+  default:
+    properties:
+      hibernate:
+        hbm2ddl:
+          auto: none
+    entity-scan:
+      packages: "com.github.brane08.pagila.models"
+netty:
+  default:
+    allocator:
+      max-order: 3
+

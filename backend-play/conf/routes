@@ -1,0 +1,11 @@
+# Defaults routes added
+GET        /                  com.github.brane08.pagila.seedworks.app.HomeController.index()
+
+# Map static resources from the /public folder to the /assets URL path
+GET        /assets/*file        controllers.Assets.at(path="/public", file)
+
+# Stores API
+GET        /api/stores        com.github.brane08.pagila.store.app.StoresController.list(page:Int?=0,size:Int?=20,order?="storeId",filter?="")
+
+# Films API
+GET        /api/films         com.github.brane08.pagila.film.app.FilmsController.list(page:Int?=0,size:Int?=20,order?="title",filter?="")
