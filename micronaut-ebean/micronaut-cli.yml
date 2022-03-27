@@ -1,0 +1,6 @@
+applicationType: default
+defaultPackage: com.github.brane08.pagila
+testFramework: junit
+sourceLanguage: java
+buildTool: gradle_kotlin
+features: [annotation-api, app-name, gradle, hibernate-validator, http-client-test, jackson-databind, java, java-application, jax-rs, jdbc-hikari, junit, logback, micronaut-aot, micronaut-build, openapi, postgres, readme, serialization-jackson, shade, test-resources, undertow-server, yaml, yaml-build]

@@ -1,0 +1,26 @@
+quarkus:
+  banner:
+    enabled: false
+  datasource:
+    db-kind: postgresql
+    username: postgres
+    password:
+    jdbc:
+      url: "jdbc:postgresql://localhost:5432/sakila"
+      max-size: 7
+  hibernate-orm:
+    validate-in-dev-mode: false
+    jdbc:
+      timezone: UTC
+    log:
+      bind-parameters: true
+  http:
+    port: 8001
+    cors:
+      ~: true
+      origins: "http://localhost:4200"
+      methods: GET,PUT,POST
+  log:
+    category:
+      "org.hibernate.SQL":
+        level: DEBUG
