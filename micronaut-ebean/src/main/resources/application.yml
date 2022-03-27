@@ -1,0 +1,13 @@
+micronaut:
+  application:
+    name: micronaut-ebean
+  server:
+    port: 8001
+datasources:
+  default:
+    db-type: postgres
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: ""
+    url: "jdbc:postgresql://localhost:5432/sakila"
+    maximum-pool-size: 7
