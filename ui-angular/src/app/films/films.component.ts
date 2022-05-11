@@ -24,4 +24,13 @@ export class FilmsComponent implements OnInit {
     this.dataSource.patchPage(defaultPage());
   }
 
+  showValues($event: MouseEvent) {
+    let count = 0;
+    for (let dsElem of this.dataSource.currentData()) {
+      if (dsElem["selected"]) {
+        count++;
+      }
+    }
+    console.log("counts:", count);
+  }
 }

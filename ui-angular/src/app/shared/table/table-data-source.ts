@@ -2,14 +2,16 @@ import {CollectionViewer, DataSource} from "@angular/cdk/collections";
 import {BehaviorSubject, finalize, Observable} from "rxjs";
 import {QueryApiService} from "../services";
 import {BaseType, defaultPageRequest, Page, PageRequest} from "../models";
+import {BasicType} from "../models/common.model";
 
 export class TableDataSource extends DataSource<object> {
 
   private _url = "";
   private _apiService: QueryApiService;
-  private dataSubject = new BehaviorSubject<object[]>([]);
+  private dataSubject = new BehaviorSubject<Record<string, BasicType>[]>([]);
   private loadingSubject = new BehaviorSubject<boolean>(false);
   private totalSubject = new BehaviorSubject<number>(0);
+  private _data: Array<Record<string, BasicType>> = [];
 
   pageRequest: PageRequest;
   readonly loading$ = this.loadingSubject.asObservable();
@@ -39,6 +41,7 @@ export class TableDataSource extends DataSource<object> {
     ).subscribe(response => {
       console.log(response.data);
       this.dataSubject.next(response.data);
+      this._data = response.data;
     });
     this._apiService.counts(this._url, this.pageRequest).subscribe(response => {
       this.totalSubject.next(response.data["total"]);
@@ -55,5 +58,9 @@ export class TableDataSource extends DataSource<object> {
 
   patch(page: Page, filters: Record<string, BaseType>) {
     this.loadData(page, filters);
+  }
+
+  currentData(): Array<Record<string, BasicType>> {
+    return this._data;
   }
 }

@@ -4,6 +4,9 @@
       <th cdk-header-cell *cdkHeaderCellDef>{{col.header}}</th>
       <td cdk-cell *cdkCellDef="let element">
         <ng-container [ngSwitch]="col.type">
+          <ng-container *ngSwitchCase="'select'">
+            <input type="checkbox" [(ngModel)]="element['selected']">
+          </ng-container>
           <ng-container *ngSwitchCase="'number'">
             {{element[col.name]}}
           </ng-container>

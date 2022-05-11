@@ -6,6 +6,12 @@ export interface Page {
   sort?: string[];
 }
 
+export interface Selectable {
+  selected?: boolean;
+}
+
+export type BasicType = string | number | boolean | object;
+
 export type ColDef = {
   type: string,
   header: string,

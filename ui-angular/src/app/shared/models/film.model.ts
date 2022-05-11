@@ -1,6 +1,7 @@
 import {Actor} from "./actor.model";
+import {Selectable} from "./common.model";
 
-export interface Film {
+export interface Film extends Selectable {
   releaseYear: number;
   language: Language;
   categories: Category[];

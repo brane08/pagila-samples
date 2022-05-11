@@ -1,2 +1,5 @@
-<h3>films works!</h3>
+<h3 class="mb-3">films works!</h3>
+<div class="d-flex mb-3">
+  <button class="btn btn-outline-primary" (click)="showValues($event)">Click!</button>
+</div>
 <app-table [dataSource]="dataSource" [displayColumns]="colDefs" [pageNumbers]="[10,25,50,100]"></app-table>
