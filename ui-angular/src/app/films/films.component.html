@@ -1,1 +1,11 @@
-<p>films works!</p>
+<div class="d-flex mt-3">
+  <mat-button-toggle-group #group="matButtonToggleGroup">
+    <mat-button-toggle aria-label="Text align left" value="left">
+      <i class="bi bi-list"></i>
+    </mat-button-toggle>
+    <mat-button-toggle aria-label="Text align center" value="center">
+      <i class="bi bi-grid"></i>
+    </mat-button-toggle>
+  </mat-button-toggle-group>
+</div>
+<router-outlet></router-outlet>

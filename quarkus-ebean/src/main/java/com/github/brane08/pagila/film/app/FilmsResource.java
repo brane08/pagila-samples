@@ -28,10 +28,16 @@ public class FilmsResource {
     }
 
     @GET
+    @Path("{film_id}")
+    public Response getById(@PathParam("film_id") int filmId) {
+        return Response.ok(repository.findById(filmId)).build();
+    }
+
+    @GET
     public Response list(@QueryParam("qry") @DefaultValue("") String qry,
                          @QueryParam("page") @DefaultValue("1") int page,
                          @QueryParam("size") @DefaultValue("20") int size,
-                         @QueryParam("sort") @DefaultValue("id") String sort,
+                         @QueryParam("sort") @DefaultValue("filmId") String sort,
                          @QueryParam("direction") @DefaultValue("1") int direction) {
         FiqlQueryBean fiqlBean = FiqlQueryBean.build(qry, page, size, sort, direction);
         PagedList<FilmInfo> list = repository.page(fiqlBean.qry, fiqlBean.pageInfo(), mapper::filmToInfo);
@@ -51,14 +57,26 @@ public class FilmsResource {
     }
 
     @GET
+    @Path("facets")
+    public Response facets() {
+        return Response.ok(ApiResult.array(repository.facets(""))).build();
+    }
+
+    @GET
     @Path("/@view")
     public Response listViews(@QueryParam("qry") @DefaultValue("") String qry,
                               @QueryParam("page") @DefaultValue("1") int page,
                               @QueryParam("size") @DefaultValue("20") int size,
-                              @QueryParam("sort") @DefaultValue("id") String sort,
+                              @QueryParam("sort") @DefaultValue("fid") String sort,
                               @QueryParam("direction") @DefaultValue("1") int direction) {
         FiqlQueryBean fiqlBean = FiqlQueryBean.build(qry, page, size, sort, direction);
         PagedList<FilmViewInfo> list = repository.listFilms(fiqlBean.pageInfo());
         return Response.ok(ApiResult.array(list.list(), list.totalCount())).build();
+    }
+
+    @GET
+    @Path("/{film_id}/actors")
+    public Response listActors(@PathParam("film_id") int filmId) {
+        return Response.ok(ApiResult.array(repository.listActors(filmId))).build();
     }
 }

@@ -1,9 +1,13 @@
 package com.github.brane08.pagila.rental.beans;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
 
 public class CustomerInfo implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     Integer customerId;
     Integer storeId;

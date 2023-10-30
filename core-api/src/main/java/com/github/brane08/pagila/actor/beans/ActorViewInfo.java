@@ -1,9 +1,13 @@
 package com.github.brane08.pagila.actor.beans;
 
 
+import java.io.Serial;
 import java.io.Serializable;
 
 public class ActorViewInfo implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     long actorId;
     String firstName;

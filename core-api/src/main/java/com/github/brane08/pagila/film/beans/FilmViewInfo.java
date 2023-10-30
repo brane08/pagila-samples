@@ -1,8 +1,13 @@
 package com.github.brane08.pagila.film.beans;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 public class FilmViewInfo implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     private Integer filmId;
     private String title;
     private String description;
