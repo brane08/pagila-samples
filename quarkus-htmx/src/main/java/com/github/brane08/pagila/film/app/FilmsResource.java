@@ -1,0 +1,86 @@
+package com.github.brane08.pagila.film.app;
+
+import com.github.brane08.pagila.film.beans.FilmInfo;
+import com.github.brane08.pagila.film.beans.FilmViewInfo;
+import com.github.brane08.pagila.film.mapper.FilmMapper;
+import com.github.brane08.pagila.film.repositories.FilmsRepository;
+import com.github.brane08.pagila.seedworks.app.FiqlQueryBean;
+import com.github.brane08.pagila.seedworks.beans.ApiResult;
+import com.github.brane08.pagila.seedworks.beans.PagedList;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+
+import java.util.Collections;
+
+@Path("/films")
+public class FilmsResource {
+
+    private final FilmsRepository repository;
+    private final FilmMapper mapper;
+
+    @Inject
+    public FilmsResource(FilmsRepository repository, FilmMapper mapper) {
+        this.repository = repository;
+        this.mapper = mapper;
+    }
+
+    @GET
+    @Path("{film_id}")
+    public Response getById(@PathParam("film_id") int filmId) {
+        return Response.ok(repository.findById(filmId)).build();
+    }
+
+    @GET
+    public Response list(@QueryParam("qry") @DefaultValue("") String qry,
+                         @QueryParam("page") @DefaultValue("1") int page,
+                         @QueryParam("size") @DefaultValue("20") int size,
+                         @QueryParam("sort") @DefaultValue("filmId") String sort,
+                         @QueryParam("direction") @DefaultValue("1") int direction) {
+        FiqlQueryBean fiqlBean = FiqlQueryBean.build(qry, page, size, sort, direction);
+        PagedList<FilmInfo> list = repository.page(fiqlBean.qry, fiqlBean.pageInfo(), mapper::filmToInfo);
+        return Response.ok(ApiResult.array(list)).build();
+    }
+
+    @GET
+    @Path("count")
+    public Response count(@QueryParam("qry") @DefaultValue("") String qry,
+                          @QueryParam("page") @DefaultValue("1") int page,
+                          @QueryParam("size") @DefaultValue("20") int size,
+                          @QueryParam("sort") @DefaultValue("id") String sort,
+                          @QueryParam("direction") @DefaultValue("1") int direction) {
+        FiqlQueryBean fiqlBean = FiqlQueryBean.build(qry, page, size, sort, direction);
+        int count = repository.count(fiqlBean.qry);
+        return Response.ok(ApiResult.array(Collections.emptyList(), count)).build();
+    }
+
+    @GET
+    @Path("facets")
+    public Response facets() {
+        return Response.ok(ApiResult.array(repository.facets(""))).build();
+    }
+
+    @GET
+    @Path("/@view")
+    public Response listViews(@QueryParam("qry") @DefaultValue("") String qry,
+                              @QueryParam("page") @DefaultValue("1") int page,
+                              @QueryParam("size") @DefaultValue("20") int size,
+                              @QueryParam("sort") @DefaultValue("fid") String sort,
+                              @QueryParam("direction") @DefaultValue("1") int direction) {
+        FiqlQueryBean fiqlBean = FiqlQueryBean.build(qry, page, size, sort, direction);
+        PagedList<FilmViewInfo> list = repository.listFilms(fiqlBean.pageInfo());
+        return Response.ok(ApiResult.array(list.list(), list.totalCount())).build();
+    }
+
+    @GET
+    @Path("/{film_id}/actors")
+    public Response listActors(@PathParam("film_id") int filmId) {
+        return Response.ok(ApiResult.array(repository.listActors(filmId))).build();
+    }
+}

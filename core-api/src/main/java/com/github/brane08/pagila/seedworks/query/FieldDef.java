@@ -2,7 +2,6 @@ package com.github.brane08.pagila.seedworks.query;
 
 import org.apache.commons.lang3.math.NumberUtils;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -16,7 +15,7 @@ public record FieldDef(String name, String type, String field, boolean array) {
         this(name, type, name, array);
     }
 
-    public Serializable asValue(String queryValue) {
+    public Object asValue(String queryValue) {
         if (array) {
             return new ArrayList<>(Arrays.stream(queryValue.split(",")).map(this::convertValue).toList());
         } else {
@@ -24,7 +23,7 @@ public record FieldDef(String name, String type, String field, boolean array) {
         }
     }
 
-    private Serializable convertValue(String queryValue) {
+    private Object convertValue(String queryValue) {
         return switch (type.toUpperCase()) {
             case "INT" -> NumberUtils.toInt(queryValue);
             case "SHORT" -> NumberUtils.toShort(queryValue);

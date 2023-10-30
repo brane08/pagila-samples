@@ -1,9 +1,8 @@
 package com.github.brane08.pagila.seedworks.beans;
 
-import java.io.Serializable;
 import java.util.List;
 
-public class ApiResult<T> implements Serializable {
+public class ApiResult<T> {
 
     protected final boolean success;
     protected final T data;

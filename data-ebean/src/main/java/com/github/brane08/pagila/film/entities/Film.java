@@ -1,5 +1,6 @@
 package com.github.brane08.pagila.film.entities;
 
+import com.github.brane08.pagila.actor.entities.Actor;
 import com.github.brane08.pagila.seedworks.entities.BaseModel;
 import com.github.brane08.pagila.seedworks.entities.YearConverter;
 import io.ebean.annotation.DbArray;
@@ -60,6 +61,13 @@ public class Film extends BaseModel {
             inverseJoinColumns = @JoinColumn(name = "category_id", referencedColumnName = "category_id")
     )
     List<Category> categories;
+
+    @ManyToMany
+    @JoinTable(name = "film_actor",
+            joinColumns = @JoinColumn(name = "film_id", referencedColumnName = "film_id"),
+            inverseJoinColumns = @JoinColumn(name = "actor_id", referencedColumnName = "actor_id")
+    )
+    List<Actor> actors;
 
     public Integer getFilmId() {
         return filmId;
@@ -163,5 +171,13 @@ public class Film extends BaseModel {
 
     public void setCategories(List<Category> categories) {
         this.categories = categories;
+    }
+
+    public List<Actor> getActors() {
+        return actors;
+    }
+
+    public void setActors(List<Actor> actors) {
+        this.actors = actors;
     }
 }

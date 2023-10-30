@@ -1,7 +1,13 @@
 package com.github.brane08.pagila.rental.beans;
 
 
-public class CustomerViewInfo {
+import java.io.Serial;
+import java.io.Serializable;
+
+public class CustomerViewInfo implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private long id;
     private String name;

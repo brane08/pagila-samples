@@ -20,7 +20,10 @@
 @import "bootstrap/scss/utilities/api";
 
 @import "styles/reset";
+@import "styles/boot-theme";
 
 @import "bootstrap-icons/font/bootstrap-icons";
 
-html, body { height: 100%; }
+html, body {
+  height: 100%;
+}

@@ -5,8 +5,8 @@ import com.github.brane08.pagila.film.mapper.FilmMapper;
 import com.github.brane08.pagila.rental.mapper.RentalMapper;
 import com.github.brane08.pagila.store.mapper.StoreMapper;
 import jakarta.enterprise.context.Dependent;
+import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Singleton;
-import jakarta.ws.rs.Produces;
 import org.mapstruct.factory.Mappers;
 
 @Dependent

@@ -1,3 +1,3 @@
-export {Film} from "./films";
+export { Film } from "./films";
 
-export {ApiResult, PageResult} from "./response"
+export { ApiResult, PageResult } from "./response"
