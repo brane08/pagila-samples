@@ -10,10 +10,6 @@ public class FiqlQueryBean {
     public String qry;
     public int direction;
 
-    public PageInfo pageInfo() {
-        return new PageInfo(page, size, sort);
-    }
-
     public static FiqlQueryBean build(String qry, int page, int size) {
         return build(qry, page, size, "id", 1);
     }
@@ -28,6 +24,11 @@ public class FiqlQueryBean {
         bean.page = page;
         bean.size = size;
         bean.direction = direction;
+        bean.sort = sort;
         return bean;
+    }
+
+    public PageInfo pageInfo() {
+        return new PageInfo(page, size, sort);
     }
 }

@@ -28,7 +28,7 @@ public class ActorsResource {
     public Response list(@QueryParam("qry") @DefaultValue("") String qry,
                          @QueryParam("page") @DefaultValue("1") int page,
                          @QueryParam("size") @DefaultValue("20") int size,
-                         @QueryParam("sort") @DefaultValue("id") String sort,
+                         @QueryParam("sort") @DefaultValue("actorId") String sort,
                          @QueryParam("direction") @DefaultValue("1") int direction) {
         FiqlQueryBean fiqlBean = FiqlQueryBean.build(qry, page, size, sort, direction);
         PagedList<ActorInfo> list = repository.page(fiqlBean.qry, fiqlBean.pageInfo(), mapper::actorToInfo);

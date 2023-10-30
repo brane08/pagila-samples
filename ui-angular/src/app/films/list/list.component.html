@@ -1,1 +1,25 @@
-<p>list works!</p>
+<div class="mat-elevation-z8 mt-3 mb-3">
+  <table [dataSource]="dataSource" mat-table>
+    <ng-container matColumnDef="filmId">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>ID.</th>
+      <td *matCellDef="let element" mat-cell>{{ element.filmId }}</td>
+    </ng-container>
+    <ng-container matColumnDef="name">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>Title</th>
+      <td *matCellDef="let element" mat-cell>{{ element.title }}</td>
+    </ng-container>
+    <ng-container matColumnDef="description">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>Description</th>
+      <td *matCellDef="let element" mat-cell>{{ element.description }}</td>
+    </ng-container>
+    <ng-container matColumnDef="category">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>Category</th>
+      <td *matCellDef="let element" mat-cell>{{ element.category }}</td>
+    </ng-container>
+    <tr *matHeaderRowDef="displayedColumns" mat-header-row></tr>
+    <tr *matRowDef="let row; columns: displayedColumns;" mat-row></tr>
+  </table>
+  <mat-paginator (page)="onPageChange($event)" [length]="total" [pageIndex]="page" [pageSizeOptions]="pageNums"
+                 [pageSize]="size" aria-label="Select page of periodic elements" showFirstLastButtons>
+  </mat-paginator>
+</div>
