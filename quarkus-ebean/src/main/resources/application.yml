@@ -16,5 +16,5 @@ quarkus:
       methods: GET,PUT,POST
   log:
     category:
-      "org.hibernate.SQL":
+      "io.ebean.SQL":
         level: DEBUG

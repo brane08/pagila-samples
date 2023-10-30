@@ -12,8 +12,6 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import java.util.List;
-
 @Path("/films")
 @Produces(MediaType.APPLICATION_JSON)
 public class FilmsResource {

@@ -51,6 +51,12 @@ public class FilmsResource {
     }
 
     @GET
+    @Path("facets")
+    public Response facets() {
+        return Response.ok(ApiResult.array(repository.facets(""))).build();
+    }
+
+    @GET
     @Path("/@view")
     public Response listViews(@QueryParam("qry") @DefaultValue("") String qry,
                               @QueryParam("page") @DefaultValue("1") int page,

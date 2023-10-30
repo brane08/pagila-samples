@@ -1,13 +1,16 @@
 import {NgModule} from '@angular/core';
 import {RouterModule, Routes} from '@angular/router';
-import {FilmsComponent} from "./films/films.component";
+import {HomeComponent} from "./home/home.component";
 
 const routes: Routes = [
-  {path: "films", component: FilmsComponent}
+  {path: "", component: HomeComponent, pathMatch: "full"},
+  {path: "films", loadChildren: () => import("./films/films.module").then(m => m.FilmsModule)},
+  {path: "actors", loadChildren: () => import("./actors/actors.module").then(m => m.ActorsModule)}
 ];
 
 @NgModule({
   imports: [RouterModule.forRoot(routes)],
   exports: [RouterModule]
 })
-export class AppRoutingModule { }
+export class AppRoutingModule {
+}

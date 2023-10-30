@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:wicket="http://wicket.apache.org">
+<head>
+    <meta charset="UTF-8" content="text/html" http-equiv="Content-Type">
+    <title>Home Page</title>
+</head>
+<body>
+<wicket:panel>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img alt="Logo" class="d-inline-block align-text-top" height="32" src="logo.png" width="32">
+                Pagila
+            </a>
+            <button aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"
+                    class="navbar-toggler"
+                    data-bs-target="#navbarNav" data-bs-toggle="collapse" type="button">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a aria-current="page" class="nav-link" href="#" wicket:id="appHome">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" wicket:id="appFilms">Films</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" wicket:id="appActors">Actors</a>
+                    </li>
+                    <li class="nav-item">
+                        <a aria-disabled="true" class="nav-link disabled">Disabled</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+</wicket:panel>
+</body>
+</html>

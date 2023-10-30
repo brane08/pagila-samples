@@ -11,8 +11,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.mapstruct.factory.Mappers;
 
-import java.util.List;
-
 @Path("/rentals")
 @Produces(MediaType.APPLICATION_JSON)
 public class RentalsResource {

@@ -1,6 +1,5 @@
 package com.github.brane08.pagila.seedworks.repositories;
 
-import com.github.brane08.pagila.seedworks.beans.PageInfo;
 import com.github.brane08.pagila.seedworks.beans.PagedList;
 import com.github.brane08.pagila.seedworks.query.EbeanQueryParser;
 import com.github.brane08.pagila.seedworks.query.QueryParser;
@@ -56,14 +55,24 @@ public abstract class EbeanRepository<T, ID> implements Repository<T, ID>, Mappi
     }
 
     @Override
-    public PagedList<T> page(String queryPart, final PageInfo request) {
+    public PagedList<T> pageOffset(String queryPart, int offset, int size, String order) {
         QueryParser<T> parser = buildParser(queryPart, entityClass());
-        return new PagedList<>(parser.getResults(request), parser.getCount());
+        return new PagedList<>(parser.getResults(offset, size, order), parser.getCount());
     }
 
     @Override
-    public <R> PagedList<R> page(String queryPart, final PageInfo request, Function<T, R> mapper) {
-        PagedList<T> list = page(queryPart, request);
+    public <R> PagedList<R> pageOffset(String queryPart, int offset, int size, String order, Function<T, R> mapper) {
+        PagedList<T> list = pageOffset(queryPart, offset, size, order);
         return new PagedList<>(list.list().stream().map(mapper).collect(Collectors.toList()), list.totalCount());
+    }
+
+    @Override
+    public <R> List<R> all(Function<T, R> mapper) {
+        return all().stream().map(mapper).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<T> all() {
+        return db.find(entityClass()).findList();
     }
 }

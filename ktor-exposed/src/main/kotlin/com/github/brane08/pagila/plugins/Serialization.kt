@@ -7,11 +7,11 @@ import io.ktor.server.application.*
 import io.ktor.server.plugins.contentnegotiation.*
 
 fun Application.configureSerialization() {
-	install(ContentNegotiation) {
-		jackson {
-			configure(SerializationFeature.INDENT_OUTPUT, true)
-			configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
-			registerModule(JavaTimeModule())  // support java.time.* types
-		}
-	}
+    install(ContentNegotiation) {
+        jackson {
+            configure(SerializationFeature.INDENT_OUTPUT, true)
+            configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
+            registerModule(JavaTimeModule())  // support java.time.* types
+        }
+    }
 }

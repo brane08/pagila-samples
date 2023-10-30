@@ -11,5 +11,11 @@ public interface MappingRepository<T, ID> {
 
     <R> Optional<R> findById(ID id, Function<T, R> mapper);
 
-    <R> PagedList<R> page(String queryPart, PageInfo request, Function<T, R> mapper);
+    default <R> PagedList<R> page(String queryPart, PageInfo request, Function<T, R> mapper) {
+        return pageOffset(queryPart, request.offset(), request.size(), request.order(), mapper);
+    }
+
+    <R> PagedList<R> pageOffset(String queryPart, int offset, int size, String order, Function<T, R> mapper);
+
+    <R> List<R> all(Function<T, R> mapper);
 }

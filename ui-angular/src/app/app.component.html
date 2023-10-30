@@ -1,11 +1,12 @@
 <mat-toolbar color="primary">
   <div class="container">
     <span class="me-1">Film Library</span>
-    <a mat-button class="me-1" color="accent" href="/films">Films</a>
-    <a mat-button class="me-1" color="accent" href="/actors">Actors</a>
-    <a mat-button class="me-1" color="accent" href="/customers">Customers</a>
+    <a class="me-1" color="accent" href="/" mat-button>Home</a>
+    <a class="me-1" color="accent" href="/films" mat-button>Films</a>
+    <a class="me-1" color="accent" href="/actors" mat-button>Actors</a>
+    <a class="me-1" color="accent" href="/customers" mat-button>Customers</a>
   </div>
 </mat-toolbar>
 <div class="container">
-<router-outlet></router-outlet>
+  <router-outlet></router-outlet>
 </div>

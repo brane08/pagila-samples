@@ -1,6 +1,5 @@
 package com.github.brane08.pagila.seedworks.query;
 
-import com.github.brane08.pagila.seedworks.beans.PageInfo;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
@@ -22,13 +21,13 @@ public final class JPAQueryParser<T> extends QueryParser<T> {
     }
 
     @Override
-    public List<T> getResults(PageInfo request) {
+    public List<T> getResults(int offset, int size, String order) {
         CriteriaQuery<T> query = cb.createQuery(this.resultClass());
         Root<T> root = query.from(this.resultClass());
         query.select(root);
         addPredicates(root, query, QueryExpr.OP_AND);
         TypedQuery<T> typedQuery = this.em.createQuery(query);
-        return typedQuery.setFirstResult(request.offset()).setMaxResults(request.size()).getResultList();
+        return typedQuery.setFirstResult(offset).setMaxResults(size).getResultList();
     }
 
     @Override

@@ -1,9 +1,12 @@
 package com.github.brane08.pagila.rental.beans;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
 
 public class RentalInfo implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     Integer rentalId;
     Instant rentalDate;

@@ -6,10 +6,10 @@ import io.ktor.server.routing.*
 import org.kodein.di.ktor.closestDI
 
 fun Application.configureRouting() {
-	val di = closestDI()
-	routing {
-		get("/") {
-			call.respondText("Hello World!")
-		}
-	}
+    val di = closestDI()
+    routing {
+        get("/") {
+            call.respondText("Hello World!")
+        }
+    }
 }

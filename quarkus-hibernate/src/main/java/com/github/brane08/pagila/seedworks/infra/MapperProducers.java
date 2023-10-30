@@ -4,8 +4,8 @@ import com.github.brane08.pagila.actor.mapper.ActorMapper;
 import com.github.brane08.pagila.film.mapper.FilmMapper;
 import com.github.brane08.pagila.store.mapper.StoreMapper;
 import jakarta.enterprise.context.Dependent;
+import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Singleton;
-import jakarta.ws.rs.Produces;
 
 @Dependent
 public class MapperProducers {

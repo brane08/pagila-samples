@@ -8,10 +8,9 @@ import io.ebean.Database;
 import io.ebean.DatabaseFactory;
 import io.ebean.annotation.Platform;
 import io.ebean.config.DatabaseConfig;
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
+import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Singleton;
-import jakarta.ws.rs.Produces;
 
 import javax.sql.DataSource;
 import java.util.List;
@@ -20,7 +19,7 @@ import java.util.List;
 public class RepositoryProducers {
 
     @Produces
-    @ApplicationScoped
+    @Singleton
     public Database ebeanDatabase(DataSource dataSource) {
         DatabaseConfig config = new DatabaseConfig();
         config.setDataSource(dataSource);

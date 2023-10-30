@@ -11,8 +11,6 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import java.util.List;
-
 @Path("/actors")
 @Produces(MediaType.APPLICATION_JSON)
 public class ActorsResource {
