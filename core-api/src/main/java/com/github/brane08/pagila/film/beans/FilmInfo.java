@@ -3,6 +3,7 @@ package com.github.brane08.pagila.film.beans;
 
 import com.github.brane08.pagila.actor.beans.ActorInfo;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
 import java.time.Year;
@@ -10,6 +11,9 @@ import java.util.List;
 import java.util.Set;
 
 public class FilmInfo implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     Integer filmId;
     String title;
@@ -25,7 +29,6 @@ public class FilmInfo implements Serializable {
     Instant lastUpdate;
     Set<String> specialFeatures;
     List<String> categories;
-    List<ActorInfo> actors;
 
     public Integer getFilmId() {
         return filmId;
@@ -137,13 +140,5 @@ public class FilmInfo implements Serializable {
 
     public void setCategories(List<String> categories) {
         this.categories = categories;
-    }
-
-    public List<ActorInfo> getActors() {
-        return actors;
-    }
-
-    public void setActors(List<ActorInfo> actors) {
-        this.actors = actors;
     }
 }

@@ -1,1 +1,0 @@
-Sample FastAPI project using sample postgres database, and mongodb sample database 

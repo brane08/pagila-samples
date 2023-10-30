@@ -50,3 +50,5 @@ GROUP BY film.film_id, film.title, film.description, category.name, film.rental_
 
 ALTER TABLE public.nicer_but_slower_film_list
     OWNER TO postgres;
+
+ALTER table public.language alter column name type varchar(20);

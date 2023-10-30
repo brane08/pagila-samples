@@ -35,7 +35,11 @@ public abstract class QueryParser<T> {
         }).toList();
     }
 
-    public abstract List<T> getResults(PageInfo request);
+    public List<T> getResults(PageInfo request) {
+        return getResults(request.offset(), request.size(), request.order());
+    }
+
+    public abstract List<T> getResults(int offset, int size, String order);
 
     public abstract int getCount();
 }
