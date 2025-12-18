@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.4</version>
+    <version>3.5.8</version>
     <relativePath/>
   </parent>
   <groupId>com.github.brane08.pagila</groupId>
@@ -15,8 +15,8 @@
   <packaging>jar</packaging>
 
   <properties>
-    <java.version>24</java.version>
-    <vaadin.version>24.8.6</vaadin.version>
+    <java.version>25</java.version>
+    <vaadin.version>24.9.6</vaadin.version>
   </properties>
 
   <repositories>
@@ -62,7 +62,7 @@
     <dependency>
       <groupId>io.ebean</groupId>
       <artifactId>ebean-postgres</artifactId>
-      <version>15.11.0</version>
+      <version>17.2.0</version>
     </dependency>
 
     <dependency>
