@@ -11,36 +11,37 @@
   <properties>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <java.version>24</java.version>
+    <java.version>25</java.version>
 
-    <quarkus.version>3.25.3</quarkus.version>
-    <ebean.version>15.11.0</ebean.version>
+    <quarkus.version>3.32.2</quarkus.version>
+    <ebean.version>17.3.0</ebean.version>
     <hibernate.version>7.0.7.Final</hibernate.version>
     <exposed.version>0.61.0</exposed.version>
     <transaction-api.version>2.0.1</transaction-api.version>
     <hikari-cp.version>5.1.0</hikari-cp.version>
     <postgresql.version>42.7.4</postgresql.version>
     <mapstruct.version>1.6.3</mapstruct.version>
-    <jackson.version>2.16.1</jackson.version>
+    <jackson.version>2.19.2</jackson.version>
     <logback.version>1.5.6</logback.version>
-    <junit5.version>5.13.4</junit5.version>
-    <commons-lang3.version>3.18.0</commons-lang3.version>
+    <junit5.version>6.0.1</junit5.version>
+    <commons-lang3.version>3.20.0</commons-lang3.version>
     <kotlin.version>2.1.10</kotlin.version>
     <spring-crypto.version>6.2.3</spring-crypto.version>
     <wicket.version>10.2.0</wicket.version>
 
     <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
-    <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
-    <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
-    <maven-enforcer-plugin.version>3.6.1</maven-enforcer-plugin.version>
-    <maven-failsafe-plugin.version>3.5.3</maven-failsafe-plugin.version>
-    <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
-    <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
-    <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
-    <ebean-plugin.version>15.12.0</ebean-plugin.version>
+    <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+    <maven-dependency-plugin.version>3.9.0</maven-dependency-plugin.version>
+    <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
+    <maven-failsafe-plugin.version>3.5.4</maven-failsafe-plugin.version>
+    <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
+    <maven-resources-plugin.version>3.4.0</maven-resources-plugin.version>
+    <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
+    <exec-maven-plugin.version>3.6.2</exec-maven-plugin.version>
+    <ebean-plugin.version>17.2.0</ebean-plugin.version>
     <flyway-maven-plugin.version>11.10.2</flyway-maven-plugin.version>
-    <versions-maven-plugin.version>2.18.0</versions-maven-plugin.version>
-    <spring-boot.version>3.5.3</spring-boot.version>
+    <versions-maven-plugin.version>2.20.1</versions-maven-plugin.version>
+    <spring-boot.version>3.5.8</spring-boot.version>
   </properties>
 
   <modules>
@@ -240,9 +241,7 @@
                 <version>.*[\.|-]+[M|m|RC|rc|b|B]+[\.|-]*\d*</version>
               </ignoreVersion>
             </ignoreVersions>
-            <comparisonMethod>maven</comparisonMethod>
           </ruleSet>
-          <comparisonMethod>maven</comparisonMethod>
           <processDependencyManagement>false</processDependencyManagement>
           <processDependencyManagementTransitive>false</processDependencyManagementTransitive>
         </configuration>
@@ -337,7 +336,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>
-          <version>3.5.1</version>
+          <version>${exec-maven-plugin.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>
