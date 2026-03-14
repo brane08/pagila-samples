@@ -10,7 +10,6 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>data-exposed</artifactId>
-  <version>1.0</version>
   <properties>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

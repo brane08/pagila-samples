@@ -10,7 +10,6 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>quarkus-ebean</artifactId>
-  <version>1.0</version>
   <properties>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -61,10 +60,12 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-jdbc-postgresql</artifactId>
     </dependency>
+<!--
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-metrics</artifactId>
     </dependency>
+-->
     <dependency>
       <groupId>io.ebean</groupId>
       <artifactId>ebean-postgres</artifactId>
@@ -123,7 +124,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-failsafe-plugin</artifactId>
-            <version>3.5.3</version>
+            <version>3.5.4</version>
             <executions>
               <execution>
                 <goals>
