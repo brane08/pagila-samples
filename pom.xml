@@ -241,7 +241,9 @@
                 <version>.*[\.|-]+[M|m|RC|rc|b|B]+[\.|-]*\d*</version>
               </ignoreVersion>
             </ignoreVersions>
+            <comparisonMethod>maven</comparisonMethod>
           </ruleSet>
+          <comparisonMethod>maven</comparisonMethod>
           <processDependencyManagement>false</processDependencyManagement>
           <processDependencyManagementTransitive>false</processDependencyManagementTransitive>
         </configuration>
