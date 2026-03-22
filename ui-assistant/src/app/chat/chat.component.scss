@@ -1,0 +1,148 @@
+// ── Modal layout ──────────────────────────────────────────────────────────────
+
+.chat-modal-content {
+  height: 80vh;
+}
+
+.sessions-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// ── Message bubbles ───────────────────────────────────────────────────────────
+
+.modal-body {
+  max-height: unset; // let the flex height drive this
+}
+
+.message-ai {
+  background-color: var(--bs-light);
+  border-radius: 0 1.5rem 1.5rem 1.5rem;
+  min-width: 55%;
+  max-width: 80%;
+}
+
+.message-human {
+  background-color: var(--bs-primary);
+  border-radius: 1.5rem 1.5rem 0 1.5rem;
+  min-width: 55%;
+  max-width: 80%;
+}
+
+.message-text {
+  word-break: break-word;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+// ── Streaming cursor ──────────────────────────────────────────────────────────
+
+.streaming-cursor {
+  display: inline-block;
+  animation: blink 0.8s step-end infinite;
+  margin-left: 2px;
+  color: var(--bs-primary);
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+// ── Tool event badge ──────────────────────────────────────────────────────────
+
+.tool-event-badge {
+  background-color: var(--bs-gray-200);
+  border: 1px dashed var(--bs-border-color);
+  align-self: center;
+}
+
+// ── Typing animation ──────────────────────────────────────────────────────────
+
+.typing-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-right: 6px;
+
+  span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--bs-secondary);
+    display: inline-block;
+    animation: bounce 1.2s infinite ease-in-out;
+
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
+  }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+  40%           { transform: scale(1);   opacity: 1;   }
+}
+
+// ── Sessions panel styles ─────────────────────────────────────────────────────
+
+.btn-icon {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.session-item {
+  cursor: pointer;
+  transition: background 0.1s;
+
+  &:hover {
+    background: var(--bs-gray-100);
+
+    .session-delete {
+      opacity: 1 !important;
+    }
+  }
+
+  &.session-active {
+    background: var(--bs-primary-bg-subtle);
+    border-left: 3px solid var(--bs-primary) !important;
+
+    .session-id {
+      color: var(--bs-primary);
+    }
+  }
+}
+
+.session-delete {
+  transition: opacity 0.15s;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 0.7rem;
+}
+
+.sessions-header {
+  background: var(--bs-gray-100);
+}
+
+// ── Mobile ────────────────────────────────────────────────────────────────────
+
+@media (max-width: 576px) {
+  .chat-modal-content {
+    flex-direction: column;
+    height: 95vh;
+  }
+
+  .sessions-sidebar {
+    width: 100%;
+    max-height: 140px;
+    border-end: 0 !important;
+    border-bottom: 1px solid var(--bs-border-color);
+  }
+}

@@ -2,10 +2,10 @@ package com.github.brane08.pagila.store.entities
 
 import com.github.brane08.pagila.film.entities.Films
 import com.github.brane08.pagila.seedworks.entities.Addresses
-import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.javatime.timestamp
-import org.jetbrains.exposed.sql.statements.api.ExposedBlob
+import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.core.statements.api.ExposedBlob
+import org.jetbrains.exposed.v1.javatime.timestamp
 import java.time.Instant
 
 object Stores : IntIdTable(name = "store", columnName = "store_id") {

@@ -1,0 +1,38 @@
+[project]
+name = "genai-assistant"
+version = "0.1.0"
+description = "AI assistant for Pagila DVD rental store"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "asyncpg",
+    "fastapi[standard]",
+    "fastmcp",
+    "google-genai",
+    "langgraph",
+    "langgraph-checkpoint-postgres",
+    "langchain[openai]",
+    "langchain-core",
+    "langchain-google-genai",
+    "langchain-mcp-adapters",
+    "langchain-openai",
+    "langchain-openrouter",
+    "langchain-postgres",
+    "mcp",
+    "pydantic",
+    "psycopg[pool,binary]",
+    "python-dotenv",
+    "sse-starlette",
+    "langchain-huggingface>=1.2.2",
+    "sentence-transformers>=5.4.1",
+    "uvicorn[standard]",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+select = ["E", "F", "I", "N", "W"]

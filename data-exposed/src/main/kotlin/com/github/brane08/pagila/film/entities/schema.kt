@@ -4,11 +4,11 @@ import com.github.brane08.pagila.actor.entities.Actors
 import com.github.brane08.pagila.film.beans.FilmInfo
 import com.github.brane08.pagila.seedworks.entities.Categories
 import com.github.brane08.pagila.seedworks.entities.Languages
-import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.javatime.timestamp
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.Year

@@ -1,0 +1,78 @@
+<div class="modal-content shadow-lg d-flex flex-row chat-modal-content">
+
+  <!-- ── Sessions sidebar ──────────────────────────────────────────────────── -->
+  <div class="sessions-sidebar border-end">
+    <app-sessions></app-sessions>
+  </div>
+
+  <!-- ── Main chat area ────────────────────────────────────────────────────── -->
+  <div class="d-flex flex-column flex-grow-1 min-w-0">
+
+    <!-- Header -->
+    <div class="modal-header py-2">
+      <div class="d-flex align-items-center w-100">
+        <i class="fas fa-robot me-2 text-primary"></i>
+        <h5 class="modal-title mb-0 fw-bold flex-grow-1">Your AI Assistant</h5>
+        <small class="text-muted me-3">
+          <i class="fas fa-tag me-1"></i>{{ chatService.currentThreadId() }}
+        </small>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div #chatHistory class="modal-body p-0 overflow-y-auto flex-grow-1">
+      <div class="d-flex flex-column bg-secondary-subtle p-3">
+
+        @for (msg of chatService.messages(); track msg.timestamp) {
+          <div class="d-flex mb-3 w-100" [class.justify-content-start]="msg.sender !== 'user'" [class.justify-content-end]="msg.sender === 'user'">
+            <!-- Tool event row -->
+            @if (msg.sender === 'tool') {
+              <div class="tool-event-badge px-3 py-1 rounded-pill small text-muted fst-italic">
+                {{ msg.text }}
+              </div>
+            } @else {
+              <div class="p-3 shadow-sm" [class.message-human]="msg.sender === 'user'" [class.message-ai]="msg.sender === 'ai'">
+                <!-- Sender row -->
+                <div class="d-flex align-items-center mb-2 small" [class.text-white]="msg.sender === 'user'">
+                  <i class="fas me-2 fs-6" [class.fa-robot]="msg.sender === 'ai'" [class.fa-user]="msg.sender === 'user'"></i>
+                  <strong class="me-auto">{{ msg.name }}</strong>
+                  <small class="ms-auto" [class.text-light]="msg.sender === 'user'" [class.text-muted]="msg.sender === 'ai'">{{ formatTime(msg.timestamp) }}</small>
+                </div>
+
+                <!-- Content -->
+                <div class="message-text" [class.text-white]="msg.sender === 'user'">
+                  {{ msg.text }}@if (msg.isStreaming) {<span class="streaming-cursor">▋</span>}
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Typing indicator -->
+        @if (chatService.isLoading()) {
+          <div class="text-start py-2 opacity-75">
+            <small class="text-muted">
+              <span class="typing-dots">
+                <span></span><span></span><span></span>
+              </span>
+              Assistant is typing…
+            </small>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="p-3 border-top">
+      <div class="d-flex align-items-center gap-2">
+        <textarea [formControl]="messageForm" class="form-control" rows="2"
+                  placeholder="Type your message… (Enter to send, Shift+Enter for newline)" (keydown)="handleKeyDown($event)"></textarea>
+        <button class="btn btn-primary btn-lg rounded-circle flex-shrink-0" [disabled]="isSendDisabled" (click)="sendMessage()" title="Send">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
