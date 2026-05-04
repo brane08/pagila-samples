@@ -1,0 +1,55 @@
+.sessions-header {
+  background: rgba(0, 0, 0, 0.03);
+  min-height: 48px;
+}
+
+// compact icon buttons inside the sessions header
+.header-btn {
+  --mdc-icon-button-state-layer-size: 32px;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+}
+
+.session-item {
+  cursor: pointer;
+  transition: background 0.1s;
+  min-height: 44px;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+
+    .session-delete {
+      opacity: 1 !important;
+    }
+  }
+
+  &.session-active {
+    background: rgba(21, 101, 192, 0.1);
+    border-left: 3px solid #1565c0 !important;
+
+    .session-id {
+      color: #1565c0;
+    }
+  }
+}
+
+.session-delete {
+  transition: opacity 0.15s;
+  // MDC-compatible compact sizing
+  --mdc-icon-button-state-layer-size: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 2px;
+}
+
+// spin the refresh icon while loading
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spinning mat-icon {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}

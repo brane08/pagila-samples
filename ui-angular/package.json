@@ -20,6 +20,8 @@
     "@angular/platform-browser": "^20.3.18",
     "@angular/platform-browser-dynamic": "^20.3.18",
     "@angular/router": "^20.3.18",
+    "@fortawesome/fontawesome-free": "^7.2.0",
+    "@ng-bootstrap/ng-bootstrap": "^19.0.0",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.6",
     "bootstrap-icons": "^1.13.1",

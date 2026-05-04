@@ -17,9 +17,9 @@ quarkus:
   http:
     port: 8001
     cors:
-      ~: true
       origins: "http://localhost:4200"
-      methods: GET,PUT,POST
+      methods: GET,PUT,POST,DELETE,PATCH
+      enabled: true
   log:
     category:
       "org.hibernate.SQL":

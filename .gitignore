@@ -79,4 +79,7 @@ wheels/
 .installed.cfg
 *.egg
 out/
+
+# AI files
 .aider*
+claude-cli.txt

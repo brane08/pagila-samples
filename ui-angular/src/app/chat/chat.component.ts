@@ -7,6 +7,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormControl, Validators } from '@angular/forms';
+import { MatDialogRef } from '@angular/material/dialog';
 
 import { ChatService } from '../chat.service';
 
@@ -19,17 +20,21 @@ import { ChatService } from '../chat.service';
 })
 export class ChatComponent {
   protected chatService = inject(ChatService);
+  protected dialogRef = inject(MatDialogRef<ChatComponent>);
   chatHistory = viewChild<ElementRef>('chatHistory');
 
   messageForm = new FormControl('', [Validators.required, Validators.minLength(1)]);
 
   constructor() {
-    // Auto-scroll whenever messages change
     effect(() => {
       this.chatService.messages();
       const el = this.chatHistory()?.nativeElement;
       if (el) setTimeout(() => (el.scrollTop = el.scrollHeight), 0);
     });
+  }
+
+  close(): void {
+    this.dialogRef.close();
   }
 
   handleKeyDown(event: KeyboardEvent): void {

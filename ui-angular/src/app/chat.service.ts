@@ -21,15 +21,12 @@ export class ChatService {
     this._messages.set([this._greeting()]);
   }
 
-  // ── Send a message (starts SSE stream) ──────────────────────────────────────
-
   sendMessage(text: string): void {
     if (this.isLoading()) return;
 
     this._streamSub?.unsubscribe();
 
     const userMsg: ChatMessage = { text, sender: 'user', name: 'You', timestamp: new Date() };
-    // Placeholder AI bubble — tokens will be appended into it
     const aiMsg: ChatMessage = {
       text: '',
       sender: 'ai',
@@ -52,8 +49,6 @@ export class ChatService {
       });
   }
 
-  // ── Load an existing session from the backend ────────────────────────────────
-
   loadSession(threadId: string): void {
     this._streamSub?.unsubscribe();
     this._currentThreadId.set(threadId);
@@ -75,8 +70,6 @@ export class ChatService {
     });
   }
 
-  // ── Start a fresh session ────────────────────────────────────────────────────
-
   newSession(): void {
     this._streamSub?.unsubscribe();
     this._currentThreadId.set(this._newThreadId());
@@ -84,12 +77,9 @@ export class ChatService {
     this.isLoading.set(false);
   }
 
-  // ── Private helpers ──────────────────────────────────────────────────────────
-
   private _handleSseEvent(event: SseEvent): void {
     switch (event.type) {
       case 'token':
-        // Append token to the last (streaming) AI message
         this._messages.update(msgs => {
           const last = { ...msgs[msgs.length - 1], text: msgs[msgs.length - 1].text + (event.content ?? '') };
           return [...msgs.slice(0, -1), last];
@@ -97,7 +87,6 @@ export class ChatService {
         break;
 
       case 'tool_start':
-        // Insert a tool-status row before the still-empty AI bubble
         const toolMsg: ChatMessage = {
           text: `🔧 Using **${event.tool}**…`,
           sender: 'tool',
@@ -130,9 +119,7 @@ export class ChatService {
     });
   }
 
-  /** Map an API MessageRecord to a local ChatMessage (returns null for skippable records). */
   private _recordToMessage(record: MessageRecord): ChatMessage | null {
-    // Blank AI messages that only carry tool-call metadata are internal LangGraph artefacts
     if (record.role === 'assistant' && !record.content && record.tool_calls.length > 0) {
       return null;
     }

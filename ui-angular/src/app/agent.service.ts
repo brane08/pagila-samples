@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 
 import {
   ChatApiResponse,
-  MessageRecord,
   SessionHistory,
   SessionInfo,
   SseEvent,
@@ -16,8 +15,6 @@ const BASE_URL = 'http://localhost:8000';
 export class AgentService {
   private http = inject(HttpClient);
 
-  // ── Synchronous chat ─────────────────────────────────────────────────────────
-
   chat(message: string, threadId: string): Observable<ChatApiResponse> {
     return this.http.post<ChatApiResponse>(`${BASE_URL}/chat`, {
       message,
@@ -25,9 +22,7 @@ export class AgentService {
     });
   }
 
-  // ── Streaming chat (POST SSE via fetch + ReadableStream) ─────────────────────
   // EventSource only supports GET, so we use fetch and parse the SSE protocol manually.
-
   streamChat(message: string, threadId: string): Observable<SseEvent> {
     return new Observable(observer => {
       const controller = new AbortController();
@@ -57,7 +52,7 @@ export class AgentService {
 
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
-            buffer = lines.pop()!; // keep incomplete last line
+            buffer = lines.pop()!;
 
             for (const line of lines) {
               if (line.startsWith('data: ')) {
@@ -75,12 +70,9 @@ export class AgentService {
           if (err?.name !== 'AbortError') observer.error(err);
         });
 
-      // Cancellation: abort the fetch when the observable is unsubscribed
       return () => controller.abort();
     });
   }
-
-  // ── Session management ───────────────────────────────────────────────────────
 
   listSessions(): Observable<{ sessions: SessionInfo[]; total: number }> {
     return this.http.get<{ sessions: SessionInfo[]; total: number }>(

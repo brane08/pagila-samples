@@ -8,6 +8,7 @@ import { SessionInfo } from '../chat.models';
   selector: 'app-sessions',
   standalone: false,
   templateUrl: './sessions.component.html',
+  styleUrl: './sessions.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SessionsComponent implements OnInit {
@@ -56,7 +57,6 @@ export class SessionsComponent implements OnInit {
 
   newSession(): void {
     this.chatService.newSession();
-    // Refresh list after a short delay so the new session has had time to appear
     setTimeout(() => this.refresh(), 300);
   }
 
@@ -70,7 +70,6 @@ export class SessionsComponent implements OnInit {
     });
   }
 
-  /** Shorten a long thread_id for display */
   shortId(threadId: string): string {
     return threadId.length > 18 ? '…' + threadId.slice(-15) : threadId;
   }

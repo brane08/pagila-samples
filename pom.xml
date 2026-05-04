@@ -13,9 +13,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>25</java.version>
 
-    <quarkus.version>3.34.5</quarkus.version>
+    <quarkus.version>3.35.2</quarkus.version>
     <ebean.version>17.5.0</ebean.version>
-    <hibernate.version>7.2.9.Final</hibernate.version>
+    <hibernate.version>7.3.3.Final</hibernate.version>
     <exposed.version>1.2.0</exposed.version>
     <transaction-api.version>2.0.1</transaction-api.version>
     <hikari-cp.version>5.1.0</hikari-cp.version>
@@ -25,7 +25,7 @@
     <logback.version>1.5.6</logback.version>
     <junit5.version>6.0.3</junit5.version>
     <commons-lang3.version>3.20.0</commons-lang3.version>
-    <kotlin.version>2.1.10</kotlin.version>
+    <kotlin.version>2.3.21</kotlin.version>
     <spring-crypto.version>6.2.3</spring-crypto.version>
     <wicket.version>10.2.0</wicket.version>
 
@@ -41,7 +41,7 @@
     <ebean-plugin.version>17.5.0</ebean-plugin.version>
     <flyway-maven-plugin.version>11.10.2</flyway-maven-plugin.version>
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
-    <spring-boot.version>3.5.13</spring-boot.version>
+    <spring-boot.version>4.0.6</spring-boot.version>
   </properties>
 
   <modules>

@@ -17,9 +17,7 @@ import { ToolInfo } from '../chat.models';
           <p class="text-muted mb-3">{{ toolInfo.description }}</p>
           <div class="bg-light p-3 rounded-2 small">
             <strong>Parameters:</strong>
-            <pre class="mb-0 mt-2 small overflow-auto" style="max-height: 100px; font-size: 0.8rem;">
-{{ toolInfo.parameters | json }}
-          </pre>
+            <pre class="mb-0 mt-2 small overflow-auto" style="max-height: 100px; font-size: 0.8rem;">{{ toolInfo.parameters | json }}</pre>
           </div>
         </div>
 
@@ -34,7 +32,6 @@ import { ToolInfo } from '../chat.models';
       </div>
     </div>
   `,
-  styleUrl: './tool-confirm.component.scss',
 })
 export class ToolConfirmComponent {
   @Input() toolInfo!: ToolInfo;
