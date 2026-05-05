@@ -1,0 +1,28 @@
+<div class="mat-elevation-z8 mt-3 mb-3">
+  @if (actorsResource.isLoading()) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  }
+  <table [dataSource]="actorsResource.value() ?? []" mat-table>
+    <ng-container matColumnDef="actorId">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>ID</th>
+      <td *matCellDef="let element" mat-cell>{{ element.actorId }}</td>
+    </ng-container>
+    <ng-container matColumnDef="firstName">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>First Name</th>
+      <td *matCellDef="let element" mat-cell>{{ element.firstName }}</td>
+    </ng-container>
+    <ng-container matColumnDef="lastName">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>Last Name</th>
+      <td *matCellDef="let element" mat-cell>{{ element.lastName }}</td>
+    </ng-container>
+    <ng-container matColumnDef="filmInfo">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>Films</th>
+      <td *matCellDef="let element" mat-cell>{{ element.filmInfo }}</td>
+    </ng-container>
+    <tr *matHeaderRowDef="displayedColumns" mat-header-row></tr>
+    <tr *matRowDef="let row; columns: displayedColumns;" mat-row></tr>
+  </table>
+  <mat-paginator (page)="onPageChange($event)" [length]="total()" [pageIndex]="page()" [pageSizeOptions]="pageNums"
+                 [pageSize]="size()" aria-label="Select page" showFirstLastButtons>
+  </mat-paginator>
+</div>

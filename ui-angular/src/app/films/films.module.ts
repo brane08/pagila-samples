@@ -3,17 +3,22 @@ import { CommonModule } from '@angular/common';
 import { FilmsRoutingModule } from "./films-routing.module";
 import { FilmListComponent } from './list/list.component';
 import { FilmsComponent } from './films.component';
+import { FilmSalesComponent } from './sales/sales.component';
+import { FilmCardComponent } from './card/card.component';
 import { MatTableModule } from "@angular/material/table";
 import { MatPaginatorModule } from "@angular/material/paginator";
-import { FilmCardComponent } from './card/card.component';
 import { MatButtonToggleModule } from "@angular/material/button-toggle";
 import { MatIconModule } from "@angular/material/icon";
+import { MatTabsModule } from "@angular/material/tabs";
+import { MatProgressBarModule } from "@angular/material/progress-bar";
+import { RouterModule } from "@angular/router";
 
 
 @NgModule({
   declarations: [
     FilmsComponent,
     FilmListComponent,
+    FilmSalesComponent,
     FilmCardComponent
   ],
   imports: [
@@ -22,7 +27,10 @@ import { MatIconModule } from "@angular/material/icon";
     MatTableModule,
     MatPaginatorModule,
     MatButtonToggleModule,
-    MatIconModule
+    MatIconModule,
+    MatTabsModule,
+    MatProgressBarModule,
+    RouterModule
   ]
 })
 export class FilmsModule {

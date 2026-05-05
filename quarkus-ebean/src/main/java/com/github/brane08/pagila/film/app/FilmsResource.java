@@ -2,6 +2,7 @@ package com.github.brane08.pagila.film.app;
 
 import com.github.brane08.pagila.film.beans.FilmInfo;
 import com.github.brane08.pagila.film.beans.FilmViewInfo;
+import com.github.brane08.pagila.film.beans.NicerFilmViewInfo;
 import com.github.brane08.pagila.film.mapper.FilmMapper;
 import com.github.brane08.pagila.film.repositories.FilmsRepository;
 import com.github.brane08.pagila.seedworks.app.FiqlQueryBean;
@@ -78,5 +79,23 @@ public class FilmsResource {
     @Path("/{film_id}/actors")
     public Response listActors(@PathParam("film_id") int filmId) {
         return Response.ok(ApiResult.array(repository.listActors(filmId))).build();
+    }
+
+    @GET
+    @Path("/@nicer-view")
+    public Response listNicerViews(@QueryParam("page") @DefaultValue("1") int page,
+                                   @QueryParam("size") @DefaultValue("20") int size,
+                                   @QueryParam("sort") @DefaultValue("fid") String sort,
+                                   @QueryParam("direction") @DefaultValue("1") int direction) {
+        FiqlQueryBean fiqlBean = FiqlQueryBean.build("", page, size, sort, direction);
+        PagedList<NicerFilmViewInfo> list = repository.offsetOfNicerFilms(
+                fiqlBean.pageInfo().offset(), fiqlBean.pageInfo().size(), fiqlBean.pageInfo().order());
+        return Response.ok(ApiResult.array(list.list(), list.totalCount())).build();
+    }
+
+    @GET
+    @Path("/@sales-by-category")
+    public Response salesByCategory() {
+        return Response.ok(ApiResult.array(repository.allSalesByCategory())).build();
     }
 }

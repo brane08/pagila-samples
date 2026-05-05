@@ -1,55 +1,36 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FilmsService } from "../../shared/services";
-import { Subscription } from "rxjs";
-import { MatTableDataSource } from "@angular/material/table";
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { map, tap } from 'rxjs';
 import { PageEvent } from "@angular/material/paginator";
+import { FilmsService } from "../../shared/services";
+import { FilmView } from "../../shared/models/films";
 import { defaultPages } from "../../shared/common";
 
 @Component({
   selector: 'app-film-list',
   templateUrl: './list.component.html',
-  styleUrls: [],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false
 })
-export class FilmListComponent implements OnInit, OnDestroy {
+export class FilmListComponent {
+  private films = inject(FilmsService);
 
   pageNums = defaultPages();
-  dataSource = new MatTableDataSource();
-  displayedColumns: string[] = ['filmId', 'name', 'description', 'category'];
-  page = 0;
-  size = 10;
-  total = 0;
-  private _subs: Subscription[] = []
+  displayedColumns = ['filmId', 'name', 'description', 'category'];
+  page = signal(0);
+  size = signal(10);
+  total = signal(0);
 
-  constructor(private films: FilmsService) {
-  }
+  filmsResource = rxResource<FilmView[], { page: number; size: number }>({
+    params: () => ({ page: this.page(), size: this.size() }),
+    stream: ({ params }) => this.films.getFilmsView(params.page, params.size).pipe(
+      tap(r => this.total.set(r.totalCount)),
+      map(r => r.data)
+    )
+  });
 
-  ngOnDestroy(): void {
-    this.dataSource.disconnect();
-    for (let sub of this._subs) {
-      if (sub) {
-        sub.unsubscribe();
-      }
-    }
-  }
-
-  ngOnInit(): void {
-    this.fetchPage();
-    this.dataSource.connect();
-  }
-
-  fetchPage() {
-    this._subs.push(this.films.getFilmsView(this.page, this.size).subscribe(response => {
-      this.dataSource.data = response.data;
-      this.total = response.totalCount;
-    }));
-  }
-
-  onPageChange(evt: PageEvent) {
-    this.page = evt.pageIndex;
-    this.size = evt.pageSize;
-    this.total = evt.length;
-    console.log(`Page: ${this.page}, Size: ${this.size}`);
-    this.fetchPage();
+  onPageChange(evt: PageEvent): void {
+    this.page.set(evt.pageIndex);
+    this.size.set(evt.pageSize);
   }
 }

@@ -28,3 +28,19 @@ export interface FilmView {
   lastUpdate: Date;
   actors: string;
 }
+
+export interface NicerFilmView {
+  fid: number;
+  title: string;
+  description: string;
+  category: string;
+  price: number;
+  length: number;
+  rating: string;
+  actors: string;
+}
+
+export interface SalesByFilmCategory {
+  category: string;
+  totalSales: number;
+}

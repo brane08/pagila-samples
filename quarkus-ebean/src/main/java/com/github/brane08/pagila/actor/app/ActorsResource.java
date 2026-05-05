@@ -1,6 +1,7 @@
 package com.github.brane08.pagila.actor.app;
 
 import com.github.brane08.pagila.actor.beans.ActorInfo;
+import com.github.brane08.pagila.actor.beans.ActorViewInfo;
 import com.github.brane08.pagila.actor.mapper.ActorMapper;
 import com.github.brane08.pagila.actor.repositories.ActorsRepository;
 import com.github.brane08.pagila.seedworks.app.FiqlQueryBean;
@@ -33,5 +34,17 @@ public class ActorsResource {
         FiqlQueryBean fiqlBean = FiqlQueryBean.build(qry, page, size, sort, direction);
         PagedList<ActorInfo> list = repository.page(fiqlBean.qry, fiqlBean.pageInfo(), mapper::actorToInfo);
         return Response.ok(ApiResult.array(list)).build();
+    }
+
+    @GET
+    @Path("/@view")
+    public Response listViews(@QueryParam("page") @DefaultValue("1") int page,
+                              @QueryParam("size") @DefaultValue("20") int size,
+                              @QueryParam("sort") @DefaultValue("actorId") String sort,
+                              @QueryParam("direction") @DefaultValue("1") int direction) {
+        FiqlQueryBean fiqlBean = FiqlQueryBean.build("", page, size, sort, direction);
+        PagedList<ActorViewInfo> list = repository.listActorViews(
+                fiqlBean.pageInfo().offset(), fiqlBean.pageInfo().size(), fiqlBean.pageInfo().order());
+        return Response.ok(ApiResult.array(list.list(), list.totalCount())).build();
     }
 }

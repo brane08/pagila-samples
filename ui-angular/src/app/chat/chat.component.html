@@ -9,12 +9,11 @@
   <div class="d-flex flex-column flex-grow-1 min-w-0">
 
     <!-- Header -->
-    <div class="chat-header d-flex align-items-center px-3">
-      <mat-icon class="me-2 header-icon">smart_toy</mat-icon>
-      <span class="fw-bold flex-grow-1 fs-6">Your AI Assistant</span>
-      <small class="text-muted me-2 text-truncate" style="max-width: 200px">
-        <mat-icon inline>sell</mat-icon>
-        {{ chatService.currentThreadId() }}
+    <div class="chat-header d-flex align-items-center px-3 gap-2">
+      <i class="bi bi-robot fs-5 text-primary"></i>
+      <span class="fw-medium flex-grow-1" style="font: var(--mat-sys-title-medium)">Your AI Assistant</span>
+      <small class="text-muted text-truncate d-none d-sm-block" style="max-width: 180px; font: var(--mat-sys-label-small)">
+        <i class="bi bi-tag me-1"></i>{{ chatService.currentThreadId() }}
       </small>
       <button mat-icon-button (click)="close()" aria-label="Close">
         <mat-icon>close</mat-icon>
@@ -23,25 +22,36 @@
 
     <!-- Messages -->
     <div #chatHistory class="chat-messages flex-grow-1 overflow-y-auto">
-      <div class="d-flex flex-column bg-secondary-subtle p-3">
+      <div class="d-flex flex-column p-3 gap-3">
 
         @for (msg of chatService.messages(); track msg.timestamp) {
-          <div class="d-flex mb-3 w-100" [class.justify-content-start]="msg.sender !== 'user'" [class.justify-content-end]="msg.sender === 'user'">
+          <div class="d-flex w-100"
+               [class.justify-content-start]="msg.sender !== 'user'"
+               [class.justify-content-end]="msg.sender === 'user'">
+
             <!-- Tool event row -->
             @if (msg.sender === 'tool') {
-              <div class="tool-event-badge px-3 py-1 rounded-pill small text-muted fst-italic">
-                {{ msg.text }}
+              <div class="tool-badge d-flex align-items-center gap-1 px-3 py-1 align-self-center">
+                <i class="bi bi-tools small"></i>
+                <span class="small">{{ msg.text }}</span>
               </div>
+
             } @else {
-              <div class="p-3 shadow-sm" [class.message-human]="msg.sender === 'user'" [class.message-ai]="msg.sender === 'ai'">
+              <div class="message-bubble p-3"
+                   [class.message-user]="msg.sender === 'user'"
+                   [class.message-ai]="msg.sender === 'ai'">
+
                 <!-- Sender row -->
-                <div class="d-flex align-items-center mb-2 small" [class.text-white]="msg.sender === 'user'">
-                  <mat-icon class="msg-icon me-1" [fontIcon]="msg.sender === 'ai' ? 'smart_toy' : 'person'"></mat-icon>
+                <div class="d-flex align-items-center mb-1 gap-1" style="font: var(--mat-sys-label-small)">
+                  <i class="bi"
+                     [class.bi-robot]="msg.sender === 'ai'"
+                     [class.bi-person-fill]="msg.sender === 'user'"></i>
                   <strong class="me-auto">{{ msg.name }}</strong>
-                  <small class="ms-auto" [class.text-light]="msg.sender === 'user'" [class.text-muted]="msg.sender === 'ai'">{{ formatTime(msg.timestamp) }}</small>
+                  <span class="ms-2 opacity-75">{{ formatTime(msg.timestamp) }}</span>
                 </div>
+
                 <!-- Content -->
-                <div class="message-text" [class.text-white]="msg.sender === 'user'">
+                <div class="message-text">
                   {{ msg.text }}@if (msg.isStreaming) {<span class="streaming-cursor">▋</span>}
                 </div>
               </div>
@@ -51,11 +61,9 @@
 
         <!-- Typing indicator -->
         @if (chatService.isLoading()) {
-          <div class="text-start py-2 opacity-75">
-            <small class="text-muted">
-              <span class="typing-dots"><span></span><span></span><span></span></span>
-              Assistant is typing…
-            </small>
+          <div class="d-flex align-items-center gap-2 ps-1 opacity-75">
+            <span class="typing-dots"><span></span><span></span><span></span></span>
+            <small class="text-muted" style="font: var(--mat-sys-body-small)">Assistant is typing…</small>
           </div>
         }
       </div>

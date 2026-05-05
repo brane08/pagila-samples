@@ -4,8 +4,12 @@ import com.github.brane08.pagila.actor.beans.ActorInfo;
 import com.github.brane08.pagila.actor.entities.Actor;
 import com.github.brane08.pagila.actor.mapper.ActorMapper;
 import com.github.brane08.pagila.film.beans.FilmViewInfo;
+import com.github.brane08.pagila.film.beans.NicerFilmViewInfo;
+import com.github.brane08.pagila.film.beans.SalesByFilmCategoryInfo;
 import com.github.brane08.pagila.film.entities.Film;
 import com.github.brane08.pagila.film.entities.FilmView;
+import com.github.brane08.pagila.film.entities.NicerFilmView;
+import com.github.brane08.pagila.film.entities.SalesByFilmCategory;
 import com.github.brane08.pagila.film.mapper.FilmMapper;
 import com.github.brane08.pagila.seedworks.beans.Facet;
 import com.github.brane08.pagila.seedworks.beans.PageInfo;
@@ -64,8 +68,7 @@ public class FilmsRepository extends EbeanRepository<Film, Integer> {
                     sum(case when price between 0 and 1 then 1 else 0 end) as price_0_1,
                     sum(case when price between 1 and 3 then 1 else 0 end) as price_1_3,
                     sum(case when price between 3 and 10 then 1 else 0 end) as price_3_9
-                from film_list
-                              """;
+                from film_list""";
         final List<Facet> facets = new ArrayList<>();
         db().sqlQuery(priceFacet).findEachRow((row, num) -> {
             Facet facet = new Facet("price");
@@ -84,6 +87,17 @@ public class FilmsRepository extends EbeanRepository<Film, Integer> {
     public List<ActorInfo> listActors(int filmId) {
         Optional<Film> film = findById(filmId);
         return film.map(f -> actorMapper.actorsToInfos(f.getActors())).orElse(Collections.emptyList());
+    }
 
+    public PagedList<NicerFilmViewInfo> offsetOfNicerFilms(int offset, int size, String order) {
+        QueryParser<NicerFilmView> parser = buildParser("", NicerFilmView.class);
+        List<NicerFilmView> list = parser.getResults(offset, size, order);
+        long count = parser.getCount();
+        return new PagedList<>(mapper.nicerFilmViewsToInfo(list), (int) count);
+    }
+
+    public List<SalesByFilmCategoryInfo> allSalesByCategory() {
+        List<SalesByFilmCategory> list = db().find(SalesByFilmCategory.class).findList();
+        return mapper.salesByCategoryToInfos(list);
     }
 }

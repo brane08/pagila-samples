@@ -1,9 +1,9 @@
 <div class="sessions-panel d-flex flex-column h-100">
+
   <!-- Header -->
   <div class="sessions-header d-flex align-items-center justify-content-between px-2 border-bottom">
-    <span class="fw-semibold small text-secondary">
-      <mat-icon inline>history</mat-icon>
-      Sessions
+    <span class="fw-medium small" style="color: var(--mat-sys-on-surface-variant)">
+      <i class="bi bi-clock-history me-1"></i>Sessions
     </span>
     <div class="d-flex">
       <button mat-icon-button class="header-btn" [class.spinning]="isLoading()" title="Refresh" (click)="refresh()">
@@ -17,22 +17,22 @@
 
   <!-- Error -->
   @if (error()) {
-    <div class="px-2 py-1">
-      <small class="text-danger">
-        <mat-icon inline>error</mat-icon>
-        {{ error() }}
-      </small>
+    <div class="px-2 py-1 d-flex align-items-center gap-1">
+      <i class="bi bi-exclamation-circle text-danger small"></i>
+      <small class="text-danger">{{ error() }}</small>
     </div>
   }
 
   <!-- Session list -->
   <div class="sessions-list flex-grow-1 overflow-y-auto">
     @if (isLoading() && sessions().length === 0) {
-      <div class="text-center py-3 text-muted">
+      <div class="text-center py-3">
         <mat-spinner diameter="24" style="margin: 0 auto"></mat-spinner>
       </div>
     } @else if (sessions().length === 0) {
-      <div class="px-2 py-3 text-center text-muted small">No saved sessions yet.</div>
+      <div class="px-2 py-3 text-center small" style="color: var(--mat-sys-on-surface-variant)">
+        No saved sessions yet.
+      </div>
     } @else {
       @for (session of sessions(); track session.thread_id) {
         <div
@@ -43,11 +43,12 @@
         >
           <div class="flex-grow-1 min-w-0 me-1">
             <div class="session-id text-truncate small fw-medium" [title]="session.thread_id">
-              <mat-icon inline class="opacity-50">chat</mat-icon>
-              {{ shortId(session.thread_id) }}
+              <i class="bi bi-chat-left me-1 opacity-50"></i>{{ shortId(session.thread_id) }}
             </div>
             @if (session.last_active) {
-              <div class="text-muted" style="font-size: 0.7rem">{{ formatDate(session.last_active) }}</div>
+              <div style="font: var(--mat-sys-label-small); color: var(--mat-sys-on-surface-variant)">
+                {{ formatDate(session.last_active) }}
+              </div>
             }
           </div>
           <button

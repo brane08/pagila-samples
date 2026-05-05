@@ -1,9 +1,12 @@
-// ── Dialog layout ─────────────────────────────────────────────────────────────
+// ── Dialog shell ──────────────────────────────────────────────────────────────
 
 .chat-dialog {
   height: 100%;
   overflow: hidden;
+  background: var(--mat-sys-surface);
 }
+
+// ── Sessions sidebar ──────────────────────────────────────────────────────────
 
 .sessions-sidebar {
   width: 220px;
@@ -11,58 +14,65 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  border-right: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+// ── Chat header ───────────────────────────────────────────────────────────────
 
 .chat-header {
   min-height: 56px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   flex-shrink: 0;
+  background: var(--mat-sys-surface);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  .text-primary {
+    color: var(--mat-sys-primary) !important;
+  }
 }
 
-.header-icon {
-  color: var(--mat-primary-color, #1565c0);
-}
-
-// ── Messages ──────────────────────────────────────────────────────────────────
+// ── Messages area ─────────────────────────────────────────────────────────────
 
 .chat-messages {
   flex: 1 1 0;
   min-height: 0;
-}
-
-// ── Message sender icon ───────────────────────────────────────────────────────
-
-.msg-icon {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  line-height: 1;
+  background: var(--mat-sys-surface-container-low);
 }
 
 // ── Message bubbles ───────────────────────────────────────────────────────────
 
-.message-ai {
-  background-color: var(--bs-light);
-  border-radius: 0 1.5rem 1.5rem 1.5rem;
-  min-width: 55%;
-  max-width: 80%;
-}
-
-.message-human {
-  background-color: var(--bs-primary);
-  border-radius: 1.5rem 1.5rem 0 1.5rem;
-  min-width: 55%;
-  max-width: 80%;
-}
-
-.message-text {
+.message-bubble {
+  max-width: 78%;
+  border-radius: var(--mat-sys-corner-large);
+  box-shadow: var(--mat-sys-level1);
   word-break: break-word;
   line-height: 1.5;
   white-space: pre-wrap;
+
+  &.message-ai {
+    background: var(--mat-sys-surface-container-lowest);
+    color: var(--mat-sys-on-surface);
+    border-top-left-radius: var(--mat-sys-corner-extra-small);
+  }
+
+  &.message-user {
+    background: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    border-bottom-right-radius: var(--mat-sys-corner-extra-small);
+  }
+}
+
+.message-text {
+  font: var(--mat-sys-body-medium);
+}
+
+// ── Tool event badge ──────────────────────────────────────────────────────────
+
+.tool-badge {
+  background: var(--mat-sys-surface-container);
+  border: 1px dashed var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-full);
+  color: var(--mat-sys-on-surface-variant);
 }
 
 // ── Streaming cursor ──────────────────────────────────────────────────────────
@@ -71,7 +81,7 @@
   display: inline-block;
   animation: blink 0.8s step-end infinite;
   margin-left: 2px;
-  color: var(--bs-primary);
+  color: var(--mat-sys-primary);
 }
 
 @keyframes blink {
@@ -79,26 +89,17 @@
   50%       { opacity: 0; }
 }
 
-// ── Tool event badge ──────────────────────────────────────────────────────────
-
-.tool-event-badge {
-  background-color: var(--bs-gray-200);
-  border: 1px dashed var(--bs-border-color);
-  align-self: center;
-}
-
 // ── Typing animation ──────────────────────────────────────────────────────────
 
 .typing-dots {
   display: inline-flex;
   gap: 3px;
-  margin-right: 6px;
 
   span {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--bs-secondary);
+    background: var(--mat-sys-on-surface-variant);
     display: inline-block;
     animation: bounce 1.2s infinite ease-in-out;
 
@@ -115,8 +116,9 @@
 // ── Input area ────────────────────────────────────────────────────────────────
 
 .chat-input {
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
   flex-shrink: 0;
+  background: var(--mat-sys-surface);
+  border-top: 1px solid var(--mat-sys-outline-variant);
 
   .mat-mdc-form-field {
     width: 100%;
@@ -125,15 +127,13 @@
 
 // ── Mobile ────────────────────────────────────────────────────────────────────
 
-@media (max-width: 576px) {
-  .chat-dialog {
-    flex-direction: column;
-  }
+@media (max-width: 600px) {
+  .chat-dialog { flex-direction: column; }
 
   .sessions-sidebar {
     width: 100%;
-    max-height: 140px;
+    max-height: 130px;
     border-right: none;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
   }
 }
