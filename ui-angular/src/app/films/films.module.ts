@@ -11,6 +11,10 @@ import { MatButtonToggleModule } from "@angular/material/button-toggle";
 import { MatIconModule } from "@angular/material/icon";
 import { MatTabsModule } from "@angular/material/tabs";
 import { MatProgressBarModule } from "@angular/material/progress-bar";
+import { MatCardModule } from "@angular/material/card";
+import { MatChipsModule } from "@angular/material/chips";
+import { MatDividerModule } from "@angular/material/divider";
+import { MatButtonModule } from "@angular/material/button";
 import { RouterModule } from "@angular/router";
 
 
@@ -30,6 +34,10 @@ import { RouterModule } from "@angular/router";
     MatIconModule,
     MatTabsModule,
     MatProgressBarModule,
+    MatCardModule,
+    MatChipsModule,
+    MatDividerModule,
+    MatButtonModule,
     RouterModule
   ]
 })

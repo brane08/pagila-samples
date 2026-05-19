@@ -1,5 +1,7 @@
+import asyncio
 import json
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import AsyncIterator
 
 from fastapi import FastAPI, HTTPException
@@ -7,15 +9,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 
+from langgraph.types import Command
+
 from agent import build_agent
 from db import close_pools, get_asyncpg_pool, init_asyncpg_pool, init_psycopg_pool
-from models import ChatRequest, ChatResponse, SessionListResponse
+from models import ChatRequest, ChatResponse, ConfirmRequest, ReindexStatus, SessionListResponse
 from sessions import delete_session, get_session_history, list_sessions
 
 # ── App state ──────────────────────────────────────────────────────────────────
 
 agent_app = None
 mcp_client = None
+_reindex_job: ReindexStatus = ReindexStatus(status="idle")
 
 
 @asynccontextmanager
@@ -87,32 +92,90 @@ async def chat(request: ChatRequest):
     )
 
 
+async def _stream_agent_events(input_or_command, config: dict) -> AsyncIterator[str]:
+    """Shared SSE generator: streams token/tool events, then emits done or tool_confirm."""
+    async for event in agent_app.astream_events(input_or_command, config=config, version="v2"):
+        kind = event["event"]
+        if kind == "on_chat_model_stream":
+            chunk = event["data"]["chunk"]
+            if chunk.content:
+                yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
+        elif kind == "on_tool_start":
+            yield f"data: {json.dumps({'type': 'tool_start', 'tool': event['name'], 'input': event['data'].get('input')})}\n\n"
+        elif kind == "on_tool_end":
+            yield f"data: {json.dumps({'type': 'tool_end', 'tool': event['name']})}\n\n"
+
+    state = await agent_app.aget_state(config)
+    if any(task.interrupts for task in state.tasks):
+        interrupts = [i for task in state.tasks for i in task.interrupts]
+        interrupt_value = interrupts[0].value
+        thread_id = config["configurable"]["thread_id"]
+        yield f"data: {json.dumps({'type': 'tool_confirm', 'thread_id': thread_id, 'tool_calls': interrupt_value.get('tool_calls', [])})}\n\n"
+    else:
+        yield 'data: {"type": "done"}\n\n'
+
+
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
     _require_agent()
+    config = {"configurable": {"thread_id": request.thread_id}}
+    return StreamingResponse(
+        _stream_agent_events({"messages": [HumanMessage(content=request.message)]}, config),
+        media_type="text/event-stream",
+    )
 
-    async def event_generator() -> AsyncIterator[str]:
-        async for event in agent_app.astream_events(
-            {"messages": [HumanMessage(content=request.message)]},
-            config={"configurable": {"thread_id": request.thread_id}},
-            version="v2",
-        ):
-            kind = event["event"]
 
-            if kind == "on_chat_model_stream":
-                chunk = event["data"]["chunk"]
-                if chunk.content:
-                    yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
+@app.post("/chat/confirm/{thread_id}/stream")
+async def chat_confirm_stream(thread_id: str, body: ConfirmRequest):
+    """Resume a paused agent run after user approves or rejects the pending tool call."""
+    _require_agent()
+    config = {"configurable": {"thread_id": thread_id}}
+    command = Command(resume={"approved": body.approved})
+    return StreamingResponse(
+        _stream_agent_events(command, config),
+        media_type="text/event-stream",
+    )
 
-            elif kind == "on_tool_start":
-                yield f"data: {json.dumps({'type': 'tool_start', 'tool': event['name'], 'input': event['data'].get('input')})}\n\n"
 
-            elif kind == "on_tool_end":
-                yield f"data: {json.dumps({'type': 'tool_end', 'tool': event['name']})}\n\n"
+# ── Admin ─────────────────────────────────────────────────────────────────────
 
-        yield 'data: {"type": "done"}\n\n'
+async def _run_reindex() -> None:
+    global _reindex_job
+    from rag import index_films
+    try:
+        await index_films()
+        _reindex_job = ReindexStatus(
+            status="done",
+            started_at=_reindex_job.started_at,
+            finished_at=datetime.now(timezone.utc).isoformat(),
+        )
+    except Exception as exc:
+        _reindex_job = ReindexStatus(
+            status="error",
+            started_at=_reindex_job.started_at,
+            finished_at=datetime.now(timezone.utc).isoformat(),
+            error=str(exc),
+        )
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@app.post("/admin/reindex", response_model=ReindexStatus, status_code=202)
+async def start_reindex():
+    """Trigger a background re-indexing of film embeddings into pgvector."""
+    global _reindex_job
+    if _reindex_job.status == "running":
+        raise HTTPException(status_code=409, detail="Reindex already in progress")
+    _reindex_job = ReindexStatus(
+        status="running",
+        started_at=datetime.now(timezone.utc).isoformat(),
+    )
+    asyncio.create_task(_run_reindex())
+    return _reindex_job
+
+
+@app.get("/admin/reindex", response_model=ReindexStatus)
+async def reindex_status():
+    """Return the status of the last (or current) reindex job."""
+    return _reindex_job
 
 
 # ── Sessions ───────────────────────────────────────────────────────────────────

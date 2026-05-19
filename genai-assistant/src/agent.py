@@ -4,9 +4,11 @@ from dotenv import load_dotenv
 from langchain_core.messages import SystemMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_openai import ChatOpenAI
+from langchain_core.messages import ToolMessage
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langgraph.graph import START, StateGraph
+from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.types import Command, interrupt
 from psycopg_pool import AsyncConnectionPool
 
 from models import AgentState
@@ -92,6 +94,24 @@ always derive answers from tool results.
 """
 
 
+async def human_review(state: AgentState) -> dict:
+    """Pause before tool execution and wait for user approval via interrupt()."""
+    last = state["messages"][-1]
+    tool_calls = [{"name": tc["name"], "args": tc["args"], "id": tc["id"]} for tc in last.tool_calls]
+    decision = interrupt({"tool_calls": tool_calls})
+    if decision.get("approved", False):
+        return {}
+    return {"messages": [
+        ToolMessage(content="Tool call rejected by user.", tool_call_id=tc["id"], name=tc["name"])
+        for tc in tool_calls
+    ]}
+
+
+def _after_review(state: AgentState) -> str:
+    last = state["messages"][-1]
+    return "tools" if getattr(last, "tool_calls", None) else "agent"
+
+
 async def build_agent(psycopg_pool: AsyncConnectionPool):
     """Build and return (compiled_graph, mcp_client). Call once at startup."""
     client = MultiServerMCPClient({
@@ -119,9 +139,11 @@ async def build_agent(psycopg_pool: AsyncConnectionPool):
 
     graph = StateGraph(AgentState)
     graph.add_node("agent", call_model)
+    graph.add_node("human_review", human_review)
     graph.add_node("tools", ToolNode(tools))
     graph.add_edge(START, "agent")
-    graph.add_conditional_edges("agent", tools_condition)
+    graph.add_conditional_edges("agent", tools_condition, {"tools": "human_review", END: END})
+    graph.add_conditional_edges("human_review", _after_review, {"tools": "tools", "agent": "agent"})
     graph.add_edge("tools", "agent")
 
     checkpointer = AsyncPostgresSaver(psycopg_pool)

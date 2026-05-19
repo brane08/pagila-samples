@@ -74,6 +74,44 @@ export class AgentService {
     });
   }
 
+  confirmTool(threadId: string, approved: boolean): Observable<SseEvent> {
+    return new Observable(observer => {
+      const controller = new AbortController();
+      fetch(`${BASE_URL}/chat/confirm/${encodeURIComponent(threadId)}/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved }),
+        signal: controller.signal,
+      })
+        .then(async response => {
+          if (!response.ok) {
+            observer.error(new Error(`HTTP ${response.status}: ${response.statusText}`));
+            return;
+          }
+          const reader = response.body!.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) { observer.complete(); break; }
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop()!;
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6).trim();
+                if (data) {
+                  try { observer.next(JSON.parse(data) as SseEvent); } catch { /* skip malformed */ }
+                }
+              }
+            }
+          }
+        })
+        .catch(err => { if (err?.name !== 'AbortError') observer.error(err); });
+      return () => controller.abort();
+    });
+  }
+
   listSessions(): Observable<{ sessions: SessionInfo[]; total: number }> {
     return this.http.get<{ sessions: SessionInfo[]; total: number }>(
       `${BASE_URL}/sessions`

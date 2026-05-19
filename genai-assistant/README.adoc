@@ -308,3 +308,87 @@ uvicorn src.main:app --reload
 
 The API will be available at `http://localhost:8000`.
 Interactive docs: `http://localhost:8000/docs`.
+
+== Testing
+
+=== FastAPI endpoint tests (no DB required)
+
+`tests/test_api.py` covers all HTTP endpoints using `httpx.AsyncClient` with
+`ASGITransport`. The agent, DB pool, and session functions are fully mocked — no running
+PostgreSQL or MCP servers needed.
+
+[source,bash]
+----
+# Run all tests
+uv run pytest
+
+# Run only the endpoint tests (fast, no DB)
+uv run pytest tests/test_api.py -v
+
+# Run a specific test class
+uv run pytest tests/test_api.py::TestChatStream -v
+uv run pytest tests/test_api.py::TestAdminReindex -v
+----
+
+.Endpoint test coverage
+[cols="2,3,1", options="header"]
+|===
+| Class | What is tested | DB needed?
+
+| `TestHealth`
+| `GET /health` — agent-ready flag, not-ready state
+| No
+
+| `TestAdminReindex`
+| `POST /admin/reindex` 202 + running status; 409 on concurrent call; `GET /admin/reindex` status object
+| No
+
+| `TestChatBlocking`
+| `POST /chat` answer shape; 503 when agent not initialised
+| No
+
+| `TestChatStream`
+| `text/event-stream` content-type; `token` events present; `done` terminates stream; token content matches mock; 503 guard
+| No
+
+| `TestChatConfirm`
+| `POST /chat/confirm/{id}/stream` approve + reject both return SSE; 503 guard
+| No
+
+| `TestSessions`
+| `GET /sessions` list; `DELETE /sessions/{id}` 200 + 404; `GET /sessions/{id}` 404
+| No
+|===
+
+=== MCP tool tests (live DB required)
+
+The remaining test files exercise individual MCP tools against a real PostgreSQL database.
+Ensure the DB is running and `.env` is populated before running.
+
+[source,bash]
+----
+# Requires PostgreSQL on localhost:5432 (or as configured in .env)
+uv run pytest tests/test_film_tools.py tests/test_actor_tools.py \
+              tests/test_store_tools.py tests/test_rental_tools.py -v
+----
+
+.MCP tool test files
+[cols="2,3", options="header"]
+|===
+| File | Coverage
+
+| `test_film_tools.py`
+| Film search, details, availability, semantic search (RAG), top-rented
+
+| `test_actor_tools.py`
+| Actor search, filmography, top actors
+
+| `test_store_tools.py`
+| Store inventory, top customers, monthly revenue
+
+| `test_rental_tools.py`
+| Customer rentals, payments, recently-returned films
+
+| `test_mcp.py`
+| MCP server startup, tool registration count
+|===

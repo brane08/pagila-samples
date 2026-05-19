@@ -5,33 +5,50 @@ import { ToolInfo } from '../chat.models';
   selector: 'app-tool-confirm',
   standalone: false,
   template: `
-    <div class="d-flex justify-content-start mb-3">
-      <div class="p-3 rounded-3 shadow-sm bg-white border border-primary max-w-75 min-w-50">
-        <div class="d-flex align-items-center mb-3">
-          <i class="fas fa-tools text-primary me-2 fs-5"></i>
-          <strong class="fw-bold text-primary fs-5">Tool Confirmation</strong>
+    <div class="d-flex justify-content-start mb-2 w-100">
+      <div class="tool-confirm-card p-3">
+        <div class="d-flex align-items-center mb-2 gap-2">
+          <mat-icon class="text-primary" style="font-size:18px;width:18px;height:18px;">build</mat-icon>
+          <strong style="font: var(--mat-sys-title-small)">Tool Confirmation</strong>
         </div>
 
         <div class="mb-3">
-          <h6 class="mb-2 fw-bold">{{ toolInfo.name }}</h6>
-          <p class="text-muted mb-3">{{ toolInfo.description }}</p>
-          <div class="bg-light p-3 rounded-2 small">
+          <div class="fw-medium mb-1" style="font: var(--mat-sys-body-medium)">{{ toolInfo.name }}</div>
+          @if (toolInfo.description) {
+            <div class="text-muted mb-2" style="font: var(--mat-sys-body-small)">{{ toolInfo.description }}</div>
+          }
+          <div class="tool-params small">
             <strong>Parameters:</strong>
-            <pre class="mb-0 mt-2 small overflow-auto" style="max-height: 100px; font-size: 0.8rem;">{{ toolInfo.parameters | json }}</pre>
+            <pre class="mb-0 mt-1 overflow-auto" style="max-height:90px;font-size:0.78rem;">{{ toolInfo.parameters | json }}</pre>
           </div>
         </div>
 
         <div class="d-flex gap-2 justify-content-end">
-          <button class="btn btn-outline-secondary btn-sm px-3" (click)="reject.emit()">
-            <i class="fas fa-times me-1"></i>Reject
+          <button mat-stroked-button (click)="reject.emit()">
+            <mat-icon>close</mat-icon> Reject
           </button>
-          <button class="btn btn-primary btn-sm px-3" (click)="approve.emit()">
-            <i class="fas fa-check me-1"></i>Approve
+          <button mat-flat-button color="primary" (click)="approve.emit()">
+            <mat-icon>check</mat-icon> Approve
           </button>
         </div>
       </div>
     </div>
   `,
+  styles: [`
+    .tool-confirm-card {
+      max-width: 78%;
+      border-radius: var(--mat-sys-corner-large);
+      border-top-left-radius: var(--mat-sys-corner-extra-small);
+      border: 1px solid var(--mat-sys-primary);
+      background: var(--mat-sys-surface-container-lowest);
+      box-shadow: var(--mat-sys-level1);
+    }
+    .tool-params {
+      background: var(--mat-sys-surface-container);
+      border-radius: var(--mat-sys-corner-small);
+      padding: 0.5em 0.75em;
+    }
+  `],
 })
 export class ToolConfirmComponent {
   @Input() toolInfo!: ToolInfo;

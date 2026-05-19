@@ -16,6 +16,7 @@ export class ChatService {
   readonly currentThreadId = this._currentThreadId.asReadonly();
   readonly isLoading = signal(false);
   readonly messageCount = computed(() => this._messages().length);
+  readonly pendingConfirm = signal<{ threadId: string; toolCalls: Array<{ name: string; args: any; id: string }> } | null>(null);
 
   constructor() {
     this._messages.set([this._greeting()]);
@@ -99,6 +100,18 @@ export class ChatService {
         });
         break;
 
+      case 'tool_confirm':
+        this.pendingConfirm.set({
+          threadId: event.thread_id ?? this._currentThreadId(),
+          toolCalls: event.tool_calls ?? [],
+        });
+        this._messages.update(msgs => {
+          const last = { ...msgs[msgs.length - 1], isStreaming: false };
+          return [...msgs.slice(0, -1), last];
+        });
+        this.isLoading.set(false);
+        break;
+
       case 'done':
         this._messages.update(msgs => {
           const last = { ...msgs[msgs.length - 1], isStreaming: false };
@@ -107,6 +120,34 @@ export class ChatService {
         this.isLoading.set(false);
         break;
     }
+  }
+
+  confirmTool(approved: boolean): void {
+    const pending = this.pendingConfirm();
+    if (!pending) return;
+
+    this.pendingConfirm.set(null);
+    this.isLoading.set(true);
+
+    const aiMsg: ChatMessage = {
+      text: '',
+      sender: 'ai',
+      name: 'Assistant',
+      timestamp: new Date(),
+      isStreaming: true,
+    };
+    this._messages.update(msgs => [...msgs, aiMsg]);
+
+    this._streamSub?.unsubscribe();
+    this._streamSub = this.agentService
+      .confirmTool(pending.threadId, approved)
+      .subscribe({
+        next: (event: SseEvent) => this._handleSseEvent(event),
+        error: () => {
+          this._finalizeStreaming('Sorry, I could not reach the assistant. Please try again.');
+          this.isLoading.set(false);
+        },
+      });
   }
 
   private _finalizeStreaming(fallbackText: string): void {

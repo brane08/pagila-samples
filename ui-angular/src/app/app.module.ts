@@ -21,6 +21,7 @@ import { RouterModule } from '@angular/router';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { HomeComponent } from './home/home.component';
 import { BaseChartDirective } from 'ng2-charts';
+import { MarkdownModule } from 'ngx-markdown';
 
 import { ChatComponent } from './chat/chat.component';
 import { ToolConfirmComponent } from './chat/tool-confirm.component';
@@ -55,6 +56,7 @@ import { SessionsComponent } from './sessions/sessions.component';
     MatProgressBarModule,
     MatCardModule,
     BaseChartDirective,
+    MarkdownModule.forRoot(),
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()),

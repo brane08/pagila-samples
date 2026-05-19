@@ -52,11 +52,25 @@
 
                 <!-- Content -->
                 <div class="message-text">
-                  {{ msg.text }}@if (msg.isStreaming) {<span class="streaming-cursor">▋</span>}
+                  @if (msg.sender === 'ai') {
+                    <markdown [data]="msg.text"></markdown>
+                    @if (msg.isStreaming) {<span class="streaming-cursor">▋</span>}
+                  } @else {
+                    {{ msg.text }}
+                  }
                 </div>
               </div>
             }
           </div>
+        }
+
+        <!-- Tool confirmation -->
+        @if (chatService.pendingConfirm(); as confirm) {
+          <app-tool-confirm
+            [toolInfo]="{ name: confirm.toolCalls[0]?.name ?? '', parameters: confirm.toolCalls[0]?.args }"
+            (approve)="chatService.confirmTool(true)"
+            (reject)="chatService.confirmTool(false)">
+          </app-tool-confirm>
         }
 
         <!-- Typing indicator -->

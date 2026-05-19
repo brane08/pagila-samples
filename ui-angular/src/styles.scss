@@ -55,3 +55,11 @@ html, body {
 .flex-spacer {
   flex: 1 1 auto;
 }
+
+.clickable-row {
+  cursor: pointer;
+
+  &:hover td {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}

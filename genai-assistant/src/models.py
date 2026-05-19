@@ -43,3 +43,16 @@ class SessionHistory(BaseModel):
     thread_id: str
     messages: list[MessageRecord]
     last_active: str | None = None
+
+
+# ── Admin models ───────────────────────────────────────────────────────────────
+
+class ReindexStatus(BaseModel):
+    status: str           # "idle" | "running" | "done" | "error"
+    started_at: str | None = None
+    finished_at: str | None = None
+    error: str | None = None
+
+
+class ConfirmRequest(BaseModel):
+    approved: bool

@@ -47,7 +47,6 @@
   box-shadow: var(--mat-sys-level1);
   word-break: break-word;
   line-height: 1.5;
-  white-space: pre-wrap;
 
   &.message-ai {
     background: var(--mat-sys-surface-container-lowest);
@@ -59,11 +58,50 @@
     background: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
     border-bottom-right-radius: var(--mat-sys-corner-extra-small);
+    white-space: pre-wrap;
   }
 }
 
 .message-text {
   font: var(--mat-sys-body-medium);
+
+  markdown {
+    display: block;
+
+    p { margin: 0 0 0.5em; &:last-child { margin-bottom: 0; } }
+    ul, ol { margin: 0.25em 0 0.5em 1.25em; padding: 0; }
+    li { margin-bottom: 0.15em; }
+    h1, h2, h3, h4 { margin: 0.5em 0 0.25em; font-weight: 600; }
+
+    code {
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85em;
+      background: var(--mat-sys-surface-container);
+      border-radius: 4px;
+      padding: 0.1em 0.35em;
+    }
+
+    pre {
+      background: var(--mat-sys-surface-container);
+      border-radius: var(--mat-sys-corner-small);
+      padding: 0.75em 1em;
+      overflow-x: auto;
+      margin: 0.5em 0;
+
+      code {
+        background: none;
+        padding: 0;
+        font-size: 0.82em;
+      }
+    }
+
+    blockquote {
+      border-left: 3px solid var(--mat-sys-primary);
+      margin: 0.5em 0;
+      padding: 0.25em 0.75em;
+      opacity: 0.85;
+    }
+  }
 }
 
 // ── Tool event badge ──────────────────────────────────────────────────────────

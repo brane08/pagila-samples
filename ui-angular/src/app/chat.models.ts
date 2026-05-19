@@ -10,7 +10,7 @@ export interface ChatMessage {
 
 export interface ToolInfo {
   name: string;
-  description: string;
+  description?: string;
   parameters: any;
 }
 
@@ -23,10 +23,12 @@ export interface ChatApiResponse {
 
 /** One event from the POST /chat/stream SSE endpoint */
 export interface SseEvent {
-  type: 'token' | 'tool_start' | 'tool_end' | 'done';
+  type: 'token' | 'tool_start' | 'tool_end' | 'done' | 'tool_confirm';
   content?: string;
   tool?: string;
   input?: any;
+  thread_id?: string;
+  tool_calls?: Array<{ name: string; args: any; id: string }>;
 }
 
 // ── Session types ──────────────────────────────────────────────────────────────

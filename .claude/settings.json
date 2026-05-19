@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(git *)",
+      "Bash(java *)",
+      "Bash(kotlin *)",
+      "Bash(*)",
+      "Read",
+      "Edit(/**)",
+      "Mcp"
+    ],
+    "deny": [
+      "Bash(rm *)",
+      "Bash(rmdir *)",
+      "Bash(mv *)",
+      "Bash(cp *)",
+      "Bash(sudo *)",
+      "Bash(shutdown *)",
+      "Bash(reboot *)",
+      "Bash(format *)",
+      "Bash(dd *)",
+      "Read(./.env*)",
+      "Read(/**/*.env)",
+      "Read(/**/*.key)",
+      "Read(/**/*.pem)",
+      "Read(/**/*.p12)"
+    ]
+  }
+}
