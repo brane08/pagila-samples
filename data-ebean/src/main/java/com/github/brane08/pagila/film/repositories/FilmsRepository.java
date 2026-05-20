@@ -7,6 +7,9 @@ import com.github.brane08.pagila.film.beans.FilmViewInfo;
 import com.github.brane08.pagila.film.beans.NicerFilmViewInfo;
 import com.github.brane08.pagila.film.beans.SalesByFilmCategoryInfo;
 import com.github.brane08.pagila.film.entities.Film;
+import com.github.brane08.pagila.film.entities.FilmCategoryFacet;
+import com.github.brane08.pagila.film.entities.FilmPriceFacet;
+import com.github.brane08.pagila.film.entities.FilmRatingFacet;
 import com.github.brane08.pagila.film.entities.FilmView;
 import com.github.brane08.pagila.film.entities.NicerFilmView;
 import com.github.brane08.pagila.film.entities.SalesByFilmCategory;
@@ -23,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class FilmsRepository extends EbeanRepository<Film, Integer> {
 
@@ -63,24 +67,27 @@ public class FilmsRepository extends EbeanRepository<Film, Integer> {
 
     @Override
     public List<Facet> facets(String queryPart) {
-        String priceFacet = """
-                    select
-                    sum(case when price between 0 and 1 then 1 else 0 end) as price_0_1,
-                    sum(case when price between 1 and 3 then 1 else 0 end) as price_1_3,
-                    sum(case when price between 3 and 10 then 1 else 0 end) as price_3_9
-                from film_list""";
         final List<Facet> facets = new ArrayList<>();
-        db().sqlQuery(priceFacet).findEachRow((row, num) -> {
-            Facet facet = new Facet("price");
-            facet.addFacetValue("price_0_1", row.getInt(1));
-            facet.addFacetValue("price_1_3", row.getInt(2));
-            facet.addFacetValue("price_3_9", row.getInt(3));
-            facets.add(facet);
-        });
-        String categorySql = "select category as key, count(category) as value from film_list group by category";
-        facets.add(new Facet("category", db().findDto(Facet.FacetValue.class, categorySql).findList()));
-        String ratingSql = "SELECT rating_txt as key, count(rating_txt) as value FROM film_list group by rating_txt";
-        facets.add(new Facet("rating", db().findDto(Facet.FacetValue.class, ratingSql).findList()));
+
+        FilmPriceFacet pf = db().find(FilmPriceFacet.class).findOne();
+        if (pf != null) {
+            Facet priceFacet = new Facet("price");
+            priceFacet.addFacetValue("price_0_1", pf.getPrice01());
+            priceFacet.addFacetValue("price_1_3", pf.getPrice13());
+            priceFacet.addFacetValue("price_3_9", pf.getPrice39());
+            facets.add(priceFacet);
+        }
+
+        List<FilmCategoryFacet> categories = db().find(FilmCategoryFacet.class).findList();
+        facets.add(new Facet("category", categories.stream()
+                .map(f -> new Facet.FacetValue(f.getKey(), f.getValue()))
+                .collect(Collectors.toList())));
+
+        List<FilmRatingFacet> ratings = db().find(FilmRatingFacet.class).findList();
+        facets.add(new Facet("rating", ratings.stream()
+                .map(f -> new Facet.FacetValue(f.getKey(), f.getValue()))
+                .collect(Collectors.toList())));
+
         return facets;
     }
 

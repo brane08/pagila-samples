@@ -11,6 +11,7 @@ import io.ebean.Database;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
+import java.util.Optional;
 
 public class ActorsRepository extends EbeanRepository<Actor, Integer> {
 
@@ -36,5 +37,10 @@ public class ActorsRepository extends EbeanRepository<Actor, Integer> {
         List<ActorView> list = parser.getResults(offset, size, order);
         long count = parser.getCount();
         return new PagedList<>(mapper.actorViewsToInfo(list), (int) count);
+    }
+
+    public Optional<ActorViewInfo> findActorViewById(int actorId) {
+        ActorView view = db().find(ActorView.class, actorId);
+        return Optional.ofNullable(view).map(mapper::actorViewToInfo);
     }
 }

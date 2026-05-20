@@ -3,23 +3,22 @@ import os
 
 import asyncpg
 from dotenv import load_dotenv
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_core.documents import Document
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_postgres import PGVector
 
 load_dotenv()
 
-
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"  # free, runs locally
-)
+# ONNX-based local embeddings — no PyTorch required, works on all platforms.
+# Model is compatible with all-MiniLM-L6-v2 (same 384-dim space).
+embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
 DB_CONNECTION = (
     f"postgresql+psycopg://{os.getenv('DB_USER', 'postgres')}"
     f":{os.getenv('DB_PASSWORD', 'postgres')}"
     f"@{os.getenv('DB_HOST', 'localhost')}"
     f":{os.getenv('DB_PORT', '5432')}"
-    f"/{os.getenv('DB_NAME', 'pagila')}"
+    f"/{os.getenv('DB_NAME', 'sakila')}"
 )
 
 COLLECTION_NAME = "film_descriptions"
@@ -42,7 +41,7 @@ async def index_films():
     conn = await asyncpg.connect(
         host=os.getenv("DB_HOST", "localhost"),
         port=int(os.getenv("DB_PORT", 5432)),
-        database=os.getenv("DB_NAME", "pagila"),
+        database=os.getenv("DB_NAME", "sakila"),
         user=os.getenv("DB_USER", "postgres"),
         password=os.getenv("DB_PASSWORD", "postgres"),
     )

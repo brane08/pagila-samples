@@ -1,32 +1,85 @@
 {
+  "llm": {
+    "model": "sonnet-4.6",
+    "temperature": 0.3,
+    "max_tokens": 6000,
+    "top_p": 0.98,
+    "max_messages_before_clear": 10,
+    "show_cost": true,
+    "show_usage": true
+  },
   "permissions": {
     "allow": [
-      "Bash(mvn *)",
-      "Bash(npm *)",
-      "Bash(npx *)",
-      "Bash(git *)",
-      "Bash(java *)",
-      "Bash(kotlin *)",
-      "Bash(*)",
       "Read",
-      "Edit(/**)",
+      "Edit(**/*.java)",
+      "Edit(**/*.kt)",
+      "Edit(**/*.kts)",
+      "Edit(**/*.xml)",
+      "Edit(**/*.properties)",
+      "Edit(**/*.yml)",
+      "Edit(**/*.yaml)",
+      "Edit(**/*.ts)",
+      "Edit(**/*.tsx)",
+      "Edit(**/*.html)",
+      "Edit(**/*.scss)",
+      "Edit(**/*.css)",
+      "Edit(**/*.py)",
+      "Edit(**/*.sql)",
+      "Edit(**/db/migration/*.sql)",
+      "Edit(**/*.json)",
+      "Edit(**/*.md)",
+      "Bash(git:*)",
+      "Bash(mvn:*)",
+      "Bash(./mvnw:*)",
+      "Bash(npm:*)",
+      "Bash(npx playwright test*)",
+      "Bash(npx playwright codegen*)",
+      "Bash(npx playwright show-report*)",
+      "Bash(npx playwright --version)",
+      "Bash(pytest:*)",
+      "Bash(python:*)",
+      "Bash(uv:*)",
+      "Bash(uvx:*)",
+      "Bash(.venv/bin/*)",
       "Mcp"
+    ],
+    "ask": [
+      "Bash(npm install*)",
+      "Bash(npm update*)",
+      "Bash(npm uninstall*)",
+      "Bash(npx playwright install*)",
+      "Bash(npx playwright install-deps*)",
+      "Bash(npx @playwright/mcp@latest*)",
+      "Bash(claude mcp add playwright*)",
+      "Bash(pip install*)",
+      "Bash(uv pip install*)",
+      "Bash(mvn quarkus:dev*)",
+      "Bash(./mvnw quarkus:dev*)",
+      "Bash(docker:*)"
     ],
     "deny": [
       "Bash(rm *)",
       "Bash(rmdir *)",
       "Bash(mv *)",
       "Bash(cp *)",
+      "Bash(dd *)",
       "Bash(sudo *)",
       "Bash(shutdown *)",
       "Bash(reboot *)",
+      "Bash(mkfs*)",
       "Bash(format *)",
-      "Bash(dd *)",
       "Read(./.env*)",
       "Read(/**/*.env)",
       "Read(/**/*.key)",
       "Read(/**/*.pem)",
-      "Read(/**/*.p12)"
-    ]
-  }
+      "Read(/**/*.p12)",
+      "Read(**/application-prod.properties)",
+      "Read(**/application-prod.yaml)",
+      "Read(**/application-prod.yml)"
+    ],
+    "defaultMode": "acceptEdits"
+  },
+  "memory": [
+    "CLAUDE.md"
+  ]
 }

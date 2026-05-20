@@ -1,10 +1,7 @@
 ---
 name: genai-assistant-architecture
 description: "Python FastAPI + LangGraph agent over Pagila DB using MCP tools, OpenRouter LLM, and pgvector RAG; Angular chat UI fully implemented as MatDialog in ui-angular"
-metadata: 
-  node_type: memory
-  type: project
-  originSessionId: 06e7f22c-ae4f-4a5d-9e8a-5bf5d3ea9b75
+type: project
 ---
 
 Active branch: `genai-assistant` — Python AI backend in `genai-assistant/` module.
@@ -26,11 +23,11 @@ contract with the frontend, and the dual connection pool requirement.
 - **film_server.py**: FastMCP server (14 tools) — film search, actor search, rental lookups,
   semantic search via RAG
 - **store_server.py**: FastMCP server (6 tools) — store inventory, top customers, monthly revenue
-- **rag.py**: HuggingFace sentence-transformers (all-MiniLM-L6-v2, local) → LangChain PGVector
-  (collection: film_descriptions); run `uv run src/rag.py` once to seed vectors
+- **rag.py**: `FastEmbedEmbeddings` with `BAAI/bge-small-en-v1.5` (ONNX, no torch) → LangChain PGVector
+  (collection: film_descriptions, schema: public); seed with `.venv/bin/python src/rag.py`
 - **sessions.py**: Reads LangGraph's PostgreSQL checkpoint tables directly for session CRUD
-- **db.py**: Two pools — asyncpg (tools + session queries) and psycopg3 (LangGraph checkpointer,
-  needs autocommit=True, prepare_threshold=0)
+- **db.py**: Two pools — asyncpg (tools + session queries, schema: public) and psycopg3
+  (LangGraph checkpointer: autocommit=True, prepare_threshold=0, options="-c search_path=langgraph")
 
 ## Frontend (ui-angular/src/app/)
 - **Fully implemented** — real SSE streaming connected to /chat/stream

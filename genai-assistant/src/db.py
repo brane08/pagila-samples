@@ -37,13 +37,14 @@ async def init_asyncpg_pool() -> asyncpg.Pool:
 
 async def init_psycopg_pool() -> AsyncConnectionPool:
     global _psycopg_pool
-    # AsyncPostgresSaver requires autocommit=True and prepare_threshold=0
+    # AsyncPostgresSaver requires autocommit=True, prepare_threshold=0.
+    # search_path=langgraph routes all checkpoint tables into the langgraph schema.
     _psycopg_pool = AsyncConnectionPool(
         conninfo=_pg_conninfo(),
         min_size=2,
         max_size=10,
         open=False,
-        kwargs={"autocommit": True, "prepare_threshold": 0},
+        kwargs={"autocommit": True, "prepare_threshold": 0, "options": "-c search_path=langgraph"},
     )
     await _psycopg_pool.open()
     return _psycopg_pool

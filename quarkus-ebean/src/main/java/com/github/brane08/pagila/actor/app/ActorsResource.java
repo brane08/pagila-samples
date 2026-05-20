@@ -37,6 +37,14 @@ public class ActorsResource {
     }
 
     @GET
+    @Path("/{actorId}")
+    public Response getById(@PathParam("actorId") int actorId) {
+        return repository.findActorViewById(actorId)
+                .map(a -> Response.ok(ApiResult.single(a)).build())
+                .orElse(Response.status(Response.Status.NOT_FOUND).build());
+    }
+
+    @GET
     @Path("/@view")
     public Response listViews(@QueryParam("page") @DefaultValue("1") int page,
                               @QueryParam("size") @DefaultValue("20") int size,

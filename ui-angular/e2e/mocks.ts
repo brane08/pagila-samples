@@ -116,7 +116,52 @@ export async function mockFilmsApi(page: Page) {
   );
 }
 
+export const MOCK_ACTOR_DETAIL = {
+  success: true,
+  data: {
+    actorId: 1,
+    firstName: 'PENELOPE',
+    lastName: 'GUINESS',
+    filmInfo: 'Animation: ACADEMY DINOSAUR, BLANKET BEVERLY; Comedy: ELEPHANT TROJAN, HALLOWEEN OTHERS'
+  }
+};
+
+export const MOCK_STORE_DETAIL = {
+  success: true,
+  data: {
+    storeId: 1,
+    manager: { staffId: 1, firstName: 'Mike', lastName: 'Hillyer', email: 'Mike.Hillyer@sakilastaff.com', username: 'Mike' },
+    address: {
+      address: '23 Workhaven Lane',
+      address2: null,
+      district: 'Alberta',
+      postalCode: '',
+      phone: '14033335568',
+      city: { city: 'Lethbridge', country: { country: 'Canada' } }
+    },
+    currentStaff: [
+      { staffId: 1, firstName: 'Mike', lastName: 'Hillyer', email: 'Mike.Hillyer@sakilastaff.com', username: 'Mike' }
+    ]
+  }
+};
+
+export async function mockActorDetailApi(page: Page, actorId = 1) {
+  await page.route(`${API}/actors/${actorId}`, route =>
+    route.fulfill({ json: MOCK_ACTOR_DETAIL })
+  );
+}
+
+export async function mockStoreDetailApi(page: Page, storeId = 1) {
+  await page.route(`${API}/stores/${storeId}`, route =>
+    route.fulfill({ json: MOCK_STORE_DETAIL })
+  );
+}
+
 export async function mockActorsApi(page: Page) {
+  // Register wildcard fallback first (lower LIFO priority), specific pattern last (wins)
+  await page.route(`${API}/actors/*`, route =>
+    route.fulfill({ json: MOCK_ACTOR_DETAIL })
+  );
   await page.route(`${API}/actors/@view*`, route =>
     route.fulfill({ json: MOCK_ACTORS_PAGE })
   );
@@ -129,6 +174,10 @@ export async function mockCustomersApi(page: Page) {
 }
 
 export async function mockStoresApi(page: Page) {
+  // Register wildcard fallback first (lower LIFO priority), specific patterns last (win)
+  await page.route(`${API}/stores/*`, route =>
+    route.fulfill({ json: MOCK_STORE_DETAIL })
+  );
   await page.route(`${API}/stores/@sales-by-store`, route =>
     route.fulfill({ json: MOCK_SALES_BY_STORE })
   );

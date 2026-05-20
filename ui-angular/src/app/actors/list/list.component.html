@@ -20,7 +20,7 @@
       <td *matCellDef="let element" mat-cell>{{ element.filmInfo }}</td>
     </ng-container>
     <tr *matHeaderRowDef="displayedColumns" mat-header-row></tr>
-    <tr *matRowDef="let row; columns: displayedColumns;" mat-row></tr>
+    <tr *matRowDef="let row; columns: displayedColumns;" mat-row [routerLink]="[row.actorId]" style="cursor:pointer"></tr>
   </table>
   <mat-paginator (page)="onPageChange($event)" [length]="total()" [pageIndex]="page()" [pageSizeOptions]="pageNums"
                  [pageSize]="size()" aria-label="Select page" showFirstLastButtons>

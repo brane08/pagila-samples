@@ -90,3 +90,5 @@ claude-cli.txt
 
 genai-assistant/test-results/
 ui-angular/test-results/
+
+playwright-report/

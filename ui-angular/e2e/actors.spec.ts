@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockActorsApi, MOCK_ACTORS_PAGE } from './mocks';
+import { mockActorsApi, mockActorDetailApi, MOCK_ACTORS_PAGE, MOCK_ACTOR_DETAIL } from './mocks';
 
 test.describe('Actors page', () => {
   test.beforeEach(async ({ page }) => {
@@ -32,5 +32,49 @@ test.describe('Actors page', () => {
     const paginator = page.locator('mat-paginator');
     await expect(paginator).toBeVisible();
     await expect(paginator).toContainText(MOCK_ACTORS_PAGE.totalCount.toString());
+  });
+
+  test('actor list rows are clickable', async ({ page }) => {
+    const rows = page.locator('table[mat-table] tr[mat-row]');
+    await expect(rows.first()).toHaveCSS('cursor', 'pointer');
+  });
+
+  test('clicking actor row navigates to /actors/:id', async ({ page }) => {
+    const actorId = MOCK_ACTORS_PAGE.data[0].actorId;
+    await mockActorDetailApi(page, actorId);
+    await page.locator('table[mat-table] tr[mat-row]').first().click();
+    await expect(page).toHaveURL(new RegExp(`/actors/${actorId}`));
+  });
+});
+
+test.describe('Actor detail card', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockActorDetailApi(page, 1);
+    await page.goto('/actors/1');
+  });
+
+  test('shows actor name in title', async ({ page }) => {
+    const actor = MOCK_ACTOR_DETAIL.data;
+    await expect(page.locator('mat-card-title')).toContainText(`${actor.firstName} ${actor.lastName}`);
+  });
+
+  test('shows actor ID in subtitle', async ({ page }) => {
+    await expect(page.locator('mat-card-subtitle')).toContainText('1');
+  });
+
+  test('shows filmography section', async ({ page }) => {
+    await expect(page.locator('.filmography-section')).toBeVisible();
+  });
+
+  test('shows category labels from filmInfo', async ({ page }) => {
+    await expect(page.locator('.category-label').first()).toContainText('Animation');
+  });
+
+  test('shows film chips within category', async ({ page }) => {
+    await expect(page.locator('mat-chip').first()).toContainText('ACADEMY DINOSAUR');
+  });
+
+  test('has a back button', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /back/i })).toBeVisible();
   });
 });

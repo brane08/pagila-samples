@@ -24,6 +24,6 @@
       <td *matCellDef="let element" mat-cell>{{ element.phone }}</td>
     </ng-container>
     <tr *matHeaderRowDef="displayedColumns" mat-header-row></tr>
-    <tr *matRowDef="let row; columns: displayedColumns;" mat-row></tr>
+    <tr *matRowDef="let row; columns: displayedColumns;" mat-row [routerLink]="['..', row.sid]" style="cursor:pointer"></tr>
   </table>
 </div>

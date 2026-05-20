@@ -13,6 +13,7 @@ Persistent memory lives in **`.claude/memory/`** (version-controlled, shared acr
 | `.claude/memory/project_overview.md` | Module map, key versions, project purpose |
 | `.claude/memory/genai_assistant_architecture.md` | FastAPI + LangGraph + MCP + Angular chat design |
 | `.claude/memory/genai_assistant_next_steps.md` | Completed features, test suite status, what's next |
+| `.claude/memory/project_db_config.md` | DB name (sakila), app schema (public), LangGraph schema (langgraph) |
 
 On a new machine, symlink the system memory path to this directory so Claude Code writes here:
 
@@ -60,16 +61,22 @@ ln -s "${PROJ}/.claude/memory" "$SYS_MEM"
 
 ## Database
 
-The base Pagila schema is the standard PostgreSQL Pagila distribution.
+The actual database is **`sakila`** (the project folder is named pagila-samples, but the DB
+name is sakila). The base schema is the standard PostgreSQL Pagila/Sakila distribution.
 **`./database/schema.sql` contains local patches applied on top** — always check this
-before changing entity column names. Current patches:
+before changing entity column names. Run it with `psql -U postgres -d sakila -f database/schema.sql`.
 
+Current patches (all idempotent — safe to re-run):
+- Creates `vector` extension and `langgraph` schema as prerequisites
 - Adds `rating_txt varchar(10)` to `film` table (populated from `rating::varchar`)
 - Recreates `film_list` and `nicer_but_slower_film_list` views to include `rating_txt`
 - Widens `language.name` to `varchar(20)`
 
 The `rating_txt` column exists specifically because Ebean cannot natively handle PostgreSQL's
 `mpaa_rating` custom enum type. Entities map to `rating_txt`, not `rating`.
+
+**Schemas:** `public` for all app tables; `langgraph` for LangGraph checkpoint tables
+(created automatically by `AsyncPostgresSaver.setup()` at genai-assistant startup).
 
 ---
 
@@ -85,11 +92,11 @@ cd quarkus-ebean && mvn quarkus:dev
 # Run quarkus-htmx in dev mode
 cd quarkus-htmx && mvn quarkus:dev
 
-# Run genai-assistant
-cd genai-assistant && uv sync && uv run src/main.py
+# Run genai-assistant (uv sync may fail on Intel Mac due to torch; venv is pre-built)
+cd genai-assistant && uv run src/main.py
 
-# Index film embeddings (run once after DB setup)
-cd genai-assistant && uv run src/rag.py
+# Index film embeddings (run once after DB setup; uses fastembed/ONNX — no torch required)
+cd genai-assistant && .venv/bin/python src/rag.py
 
 # Run Angular UI
 cd ui-angular && ng serve
@@ -115,10 +122,10 @@ chat as a `MatDialog` from the toolbar button (smart_toy icon).
 
 **Two connection pools** are required:
 - `asyncpg` — tool queries and session management
-- `psycopg3` — LangGraph's `AsyncPostgresSaver` (requires `autocommit=True`, `prepare_threshold=0`)
+- `psycopg3` — LangGraph's `AsyncPostgresSaver` (requires `autocommit=True`, `prepare_threshold=0`, `options="-c search_path=langgraph"`)
 
-**RAG**: `sentence-transformers/all-MiniLM-L6-v2` (local, no API key) + pgvector.
-Collection name: `film_descriptions`.
+**RAG**: `BAAI/bge-small-en-v1.5` via `FastEmbedEmbeddings` (ONNX, local, no API key, no torch) + pgvector.
+Collection name: `film_descriptions`. Seed with `cd genai-assistant && .venv/bin/python src/rag.py`.
 
 **Config via `.env`**: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`,
 `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`, `OPENROUTER_MODEL`.
@@ -166,7 +173,7 @@ calls are intercepted with `page.route()` mocks.
 # Start the dev server (keep running in a separate terminal)
 cd ui-angular && ng serve
 
-# Run all 66 e2e tests
+# Run all e2e tests (~92 tests)
 cd ui-angular && npx playwright test
 
 # Run a single spec file
@@ -186,16 +193,16 @@ cd ui-angular && npm run e2e:report
 | `navigation.spec.ts` | Toolbar links, page routing, title |
 | `home.spec.ts` | Stat cards, chart headings, revenue values |
 | `films.spec.ts` | Film List + Sales by Category tabs, table columns, paginator, loading bar, pagination |
-| `actors.spec.ts` | Actors tab, table columns, paginator |
+| `actors.spec.ts` | Actors tab, table columns, paginator, actor detail card |
 | `customers.spec.ts` | Customer table columns, paginator |
-| `stores.spec.ts` | Sales by Store + Staff tabs, tables |
+| `stores.spec.ts` | Sales by Store + Staff tabs, tables, store detail card |
 | `chat.spec.ts` | Dialog open/close, SSE streaming, keyboard shortcuts, sessions sidebar |
 | `error-states.spec.ts` | API 500/network errors, empty results, no JS crash |
 | `mocks.ts` | Shared `page.route()` helpers and fixture data (not a test file) |
 
-**Playwright config:** `ui-angular/playwright.config.ts` — uses the Chromium binary at
-`~/.cache/ms-playwright/chromium-1223/`. Override with env var
-`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` if your Chromium is elsewhere.
+**Playwright config:** `ui-angular/playwright.config.ts` — Chromium is downloaded automatically
+by `npx playwright install chromium`. Override the binary path with env var
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` if needed.
 
 ---
 
@@ -231,15 +238,15 @@ cd genai-assistant && uv run pytest tests/test_api.py::TestChatStream -v
 
 ---
 
-## genai-assistant: Pending Work (in order)
+## genai-assistant: Feature Status
 
-1. **Markdown rendering in chat** — AI responses contain markdown that renders as raw
-   symbols. Install `ngx-markdown` in `ui-angular` and apply a markdown pipe to `msg.text`
-   in `chat.component.html`.
+All originally planned features are complete:
 
-2. **`/admin/reindex` endpoint** — Add a `POST /admin/reindex` to `main.py` that calls
-   `index_films()` from `rag.py` so embeddings can be refreshed without CLI access.
+1. **Markdown rendering in chat** ✅ — `ngx-markdown@20` applied to AI messages
+2. **`/admin/reindex` endpoint** ✅ — `POST /admin/reindex` (202) + `GET /admin/reindex` poll
+3. **Tool confirmation UX** ✅ — LangGraph `interrupt()` node + `POST /chat/confirm/{id}/stream`
+4. **Actor detail card** ✅ — `GET /actors/{id}` backend + Angular card component
+5. **Store detail card** ✅ — Angular card component using existing `GET /stores/{id}` backend
+6. **Angular unit tests** ✅ — Karma/Jasmine specs for actors/stores services and card components
 
-3. **Tool confirmation UX** — `ToolConfirmComponent` and `ToolInfo` model already exist
-   but are not wired up. Requires: LangGraph interrupt node on the backend + frontend
-   polling/confirm flow before tool execution.
+**Next options:** Customer detail card, films service unit tests, quarkus-ebean integration tests.
