@@ -23,12 +23,15 @@ _DB = dict(
 @pytest_asyncio.fixture(autouse=True)
 async def inject_pool():
     """Create an asyncpg pool on this test's event loop and inject it into all MCP servers."""
+    import analytics_server
     import film_server
     import store_server
     pool = await asyncpg.create_pool(**_DB)
     film_server._pool = pool
     store_server._pool = pool
+    analytics_server._pool = pool
     yield
     film_server._pool = None
     store_server._pool = None
+    analytics_server._pool = None
     await pool.close()
