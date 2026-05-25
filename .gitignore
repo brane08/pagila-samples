@@ -84,9 +84,10 @@ out/
 .aider*
 claude-cli.txt
 
-.claude/*
+.claude/**
 !.claude/settings.json
 !.claude/memory/
+!.claude/memory/**
 
 genai-assistant/test-results/
 ui-angular/test-results/

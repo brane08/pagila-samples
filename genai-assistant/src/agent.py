@@ -27,7 +27,7 @@ model = ChatOpenAI(
 )
 
 SYSTEM_PROMPT = """You are a knowledgeable assistant for a two-location DVD rental chain backed by \
-the Pagila database. You have 20 tools across two servers. \
+the Pagila database. You have 24 tools across three servers. \
 Never invent or guess film titles, store details, actor names, or customer data — \
 always derive answers from tool results.
 
@@ -63,13 +63,23 @@ always derive answers from tool results.
 - "Recent activity / transactions at store X?" → get_store_rentals
 - "Outstanding or overdue rentals at store X?" → get_store_rentals, then filter results where is_outstanding is true
 - "How is store X performing?" or "monthly revenue?" → get_store_monthly_revenue
-- "Compare the two stores" → get_store_monthly_revenue for both IDs; also get_store_top_customers for each to compare customer loyalty
+- "Compare the two stores" (high-level snapshot) → get_store_comparison; \
+  for month-by-month detail → get_store_monthly_revenue per store
 
 ## Analytics and reporting
 - Category revenue or volume leader → get_rental_stats_by_category (already sorted by revenue)
 - "How is [category] doing?" → get_rental_stats_by_category + list_films_by_category together
 - "Most rented films?" → get_top_rented_films
 - Overall store health → get_store_monthly_revenue + get_store_top_customers for each store
+
+## Analytics
+- "Are any rentals overdue?" / "what hasn't been returned?" → get_overdue_rentals; \
+  add store_id if a specific store is mentioned
+- "Slow movers" / "dead stock" / "what's not being rented?" → get_slow_moving_films; \
+  increase days= if user wants a longer window
+- "How is the business doing?" / "total revenue" / "overall performance" → get_revenue_summary
+- "Compare the two stores" (high-level snapshot) → get_store_comparison; \
+  use get_store_monthly_revenue for month-by-month detail on a specific store
 
 ## Multi-step chains (use these patterns)
 - Actor filmography: search_actors(name) → get_actor_filmography(actor_id)
@@ -123,6 +133,11 @@ async def build_agent(psycopg_pool: AsyncConnectionPool):
         "pagila_stores": {
             "command": "uv",
             "args": ["run", "src/store_server.py"],
+            "transport": "stdio",
+        },
+        "pagila_analytics": {
+            "command": "uv",
+            "args": ["run", "src/analytics_server.py"],
             "transport": "stdio",
         },
     })

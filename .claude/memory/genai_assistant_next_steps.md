@@ -1,6 +1,6 @@
 ---
 name: genai_assistant_next_steps
-description: Analytics MCP server in progress (2026-05-21); Tasks 1-3 done, Tasks 4-7 pending
+description: Analytics MCP server complete (2026-05-25); all 7 tasks done, 50 tests passing
 type: project
 ---
 
@@ -63,14 +63,14 @@ cd ui-angular && ng test
 ```
 Spec files: `actors.service.spec.ts`, `stores.service.spec.ts`, actor card spec, store card spec.
 
-## Analytics MCP server (2026-05-21) — IN PROGRESS
+## Analytics MCP server (2026-05-21) — COMPLETE ✅
 
-Adding a third MCP server `genai-assistant/src/analytics_server.py` with 4 tools and wiring it into the LangGraph agent. Branch: `genai-assistant`.
+A third MCP server `genai-assistant/src/analytics_server.py` with 4 tools, fully wired into the LangGraph agent. Branch: `genai-assistant`.
 
 **Spec:** `docs/superpowers/specs/2026-05-21-analytics-mcp-server-design.md`
 **Plan:** `docs/superpowers/plans/2026-05-21-analytics-mcp-server.md` (7 tasks)
 
-**Why:** Cover the remaining Pagila schema gaps — overdue rentals, slow-moving inventory, revenue summary, store comparison. New server follows the same FastMCP + asyncpg pool pattern as `film_server.py` and `store_server.py`.
+**Why:** Cover the remaining Pagila schema gaps — overdue rentals, slow-moving inventory, revenue summary, store comparison. Follows the same FastMCP + asyncpg pool pattern as `film_server.py` and `store_server.py`.
 
 ### Task progress
 
@@ -79,16 +79,26 @@ Adding a third MCP server `genai-assistant/src/analytics_server.py` with 4 tools
 | 1: analytics_server.py skeleton + conftest.py patch | ✅ Done | d2fc5742 |
 | 2: test_analytics_tools.py (30 tests, all verified failing) | ✅ Done | 84e48b4c |
 | 3: Implement `get_overdue_rentals` (6/6 tests pass) | ✅ Done | b0b1f1d5 |
-| 4: Implement `get_slow_moving_films` | ⬜ Pending | — |
-| 5: Implement `get_revenue_summary` | ⬜ Pending | — |
-| 6: Implement `get_store_comparison` | ⬜ Pending | — |
-| 7: Wire `pagila_analytics` into agent.py + SYSTEM_PROMPT | ⬜ Pending | — |
+| 4: Implement `get_slow_moving_films` (7/7 tests pass) | ✅ Done | 5da4d95d |
+| 5: Implement `get_revenue_summary` (9/9 tests pass) | ✅ Done | 198ccc6d |
+| 6: Implement `get_store_comparison` (8/8 tests pass) | ✅ Done | 410068d2 |
+| 7: Wire `pagila_analytics` into agent.py + SYSTEM_PROMPT | ✅ Done | 7a1e9785 |
 
-### Resume instructions
+### Test suite state (as of 2026-05-25)
 
-To continue, invoke `superpowers:subagent-driven-development` and dispatch Task 4 implementer. The plan file has all code and SQL written out. Tests are already written — each task just implements one function in `analytics_server.py` and runs its test class.
+- `test_analytics_tools.py`: **30/30 passing** (live DB required)
+- `test_api.py`: **20/20 passing** (no live DB needed)
+- Combined: **50/50 passing**
 
-**How to apply:** Pick up at Task 4. Use `haiku` model for Tasks 4–6 (mechanical SQL implementation), `sonnet` for Task 7 (multi-file wiring + prompt engineering).
+```bash
+cd genai-assistant && .venv/bin/python -m pytest tests/test_api.py tests/test_analytics_tools.py -v
+```
+
+### Quality notes from review
+
+- `get_slow_moving_films`: uses `CURRENT_DATE` (not `NOW()`) in CASE expr; `days_since_rented` is `None` for never-rented films (documented in docstring)
+- `get_revenue_summary`: uses scalar subqueries (not cross-join) for busiest month; `None` guard for empty payment table
+- `get_store_comparison`: `COALESCE` on `AVG(f.rental_rate)` to handle zero-inventory stores
 
 ## What's next (after analytics server)
 
