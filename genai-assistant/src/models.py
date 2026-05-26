@@ -17,6 +17,7 @@ class ChatResponse(BaseModel):
 
 class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
+    summary: str
 
 
 # ── Session models ─────────────────────────────────────────────────────────────

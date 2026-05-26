@@ -17,9 +17,10 @@ contract with the frontend, and the dual connection pool requirement.
 ## Backend (genai-assistant/src/)
 - **main.py**: FastAPI app — GET /health, POST /chat (blocking), POST /chat/stream (SSE),
   GET/DELETE /sessions/{id}
-- **agent.py**: LangGraph StateGraph — agent node (LLM) → ToolNode (MCP tools) → loop;
+- **agent.py**: LangGraph StateGraph — `validate` node (topic classifier) → `agent` node (LLM) → `human_review` → `tools` (MCP) → `summarize` (if >10 messages) → loop;
   OpenRouter gateway (default: mistralai/devstral-2512); system prompt is a decision tree
-  that routes intents to specific tool chains
+  that routes intents to specific tool chains.
+  Graph shape: `START → validate → (relevant?) → agent | END`; post-tool: `tools → (len>10?) → summarize → agent | agent`
 - **film_server.py**: FastMCP server (14 tools) — film search, actor search, rental lookups,
   semantic search via RAG
 - **store_server.py**: FastMCP server (6 tools) — store inventory, top customers, monthly revenue

@@ -54,8 +54,8 @@ def _make_fake_agent():
     agent = MagicMock()
 
     async def _fake_astream_events(input_or_cmd, config, version):
-        yield {"event": "on_chat_model_stream", "data": {"chunk": _chunk("Hello")}, "name": "llm"}
-        yield {"event": "on_chat_model_stream", "data": {"chunk": _chunk(" world")}, "name": "llm"}
+        yield {"event": "on_chat_model_stream", "data": {"chunk": _chunk("Hello")}, "name": "llm", "metadata": {"langgraph_node": "agent"}}
+        yield {"event": "on_chat_model_stream", "data": {"chunk": _chunk(" world")}, "name": "llm", "metadata": {"langgraph_node": "agent"}}
 
     class _FakeState:
         tasks = []  # no interrupts
@@ -284,3 +284,162 @@ def _parse_sse(raw: str) -> list[dict]:
             except json.JSONDecodeError:
                 pass
     return events
+
+
+# ── AgentState ────────────────────────────────────────────────────────────────
+
+class TestSummarizationNode:
+    def test_agent_state_has_summary_annotation(self):
+        from models import AgentState
+        assert "summary" in AgentState.__annotations__
+        assert AgentState.__annotations__["summary"] is str
+
+    def test_prepare_messages_injects_summary(self):
+        from langchain_core.messages import HumanMessage, SystemMessage
+        from agent import _prepare_messages, SYSTEM_PROMPT
+
+        msgs = [HumanMessage(content="What films are in stock?")]
+        result = _prepare_messages(msgs, "User asked about action films earlier.")
+
+        system_msgs = [m for m in result if isinstance(m, SystemMessage)]
+        assert len(system_msgs) == 2
+        contents = [m.content for m in system_msgs]
+        assert any(SYSTEM_PROMPT == c for c in contents)
+        assert any("User asked about action films earlier." in c for c in contents)
+        assert result[0].content == SYSTEM_PROMPT
+        assert "User asked about action films earlier." in result[1].content
+
+    def test_prepare_messages_no_summary(self):
+        from langchain_core.messages import HumanMessage, SystemMessage
+        from agent import _prepare_messages, SYSTEM_PROMPT
+
+        msgs = [HumanMessage(content="Hello")]
+        result = _prepare_messages(msgs, "")
+
+        system_msgs = [m for m in result if isinstance(m, SystemMessage)]
+        assert len(system_msgs) == 1
+        assert system_msgs[0].content == SYSTEM_PROMPT
+        assert result[-1].content == "Hello"
+
+    def test_prepare_messages_skips_if_system_present(self):
+        from langchain_core.messages import HumanMessage, SystemMessage
+        from agent import _prepare_messages
+
+        msgs = [SystemMessage(content="Custom prompt"), HumanMessage(content="Hi")]
+        result = _prepare_messages(msgs, "Some summary")
+
+        assert result is msgs  # unchanged — no prepend
+
+    @pytest.mark.asyncio
+    async def test_summarize_history_node(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import HumanMessage, RemoveMessage
+        import agent
+
+        mock_model = MagicMock()
+        mock_model.ainvoke = AsyncMock(
+            return_value=MagicMock(content="Session summary text")
+        )
+        monkeypatch.setattr(agent, "model", mock_model)
+
+        messages = [
+            HumanMessage(content=f"msg {i}", id=str(i)) for i in range(12)
+        ]
+        state = {"messages": messages, "summary": ""}
+
+        result = await agent.summarize_history(state)
+
+        remove_ops = [m for m in result["messages"] if isinstance(m, RemoveMessage)]
+        assert len(remove_ops) == 8  # 12 - KEEP_LAST_N(4)
+        removed_ids = {m.id for m in remove_ops}
+        assert removed_ids == {str(i) for i in range(8)}
+        assert result["summary"] == "Session summary text"
+
+    @pytest.mark.asyncio
+    async def test_summarize_history_node_no_op_when_few_messages(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import HumanMessage
+        import agent
+
+        mock_model = MagicMock()
+        mock_model.ainvoke = AsyncMock()
+        monkeypatch.setattr(agent, "model", mock_model)
+
+        messages = [HumanMessage(content=f"msg {i}", id=str(i)) for i in range(4)]
+        state = {"messages": messages, "summary": ""}
+
+        result = await agent.summarize_history(state)
+
+        assert result == {}
+        mock_model.ainvoke.assert_not_called()
+
+
+# ── Validation node ────────────────────────────────────────────────────────────
+
+class TestValidationNode:
+    def test_after_validate_routes_to_agent(self):
+        from langchain_core.messages import HumanMessage
+        from langgraph.graph import END
+        from agent import _after_validate
+
+        state = {"messages": [HumanMessage(content="Do you have Titanic?")], "summary": ""}
+        assert _after_validate(state) == "agent"
+
+    def test_after_validate_routes_to_end(self):
+        from langchain_core.messages import AIMessage
+        from langgraph.graph import END
+        from agent import _after_validate
+
+        state = {
+            "messages": [AIMessage(content="I'm a DVD rental assistant.")],
+            "summary": "",
+        }
+        assert _after_validate(state) is END
+
+    def test_after_validate_empty_messages_routes_to_agent(self):
+        from langgraph.graph import END
+        from agent import _after_validate
+
+        state = {"messages": [], "summary": ""}
+        assert _after_validate(state) == "agent"
+
+    @pytest.mark.asyncio
+    async def test_validate_input_on_topic(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import HumanMessage, SystemMessage
+        import agent
+
+        mock_classifier = MagicMock()
+        mock_classifier.ainvoke = AsyncMock(return_value=agent.TopicCheck(relevant=True))
+        monkeypatch.setattr(agent, "classifier", mock_classifier)
+
+        state = {"messages": [HumanMessage(content="Do you have Titanic?")], "summary": ""}
+        result = await agent.validate_input(state)
+
+        assert result == {}
+        mock_classifier.ainvoke.assert_called_once()
+        call_args = mock_classifier.ainvoke.call_args[0][0]
+        assert any(isinstance(m, SystemMessage) and "topic classifier" in m.content for m in call_args)
+        assert any(isinstance(m, HumanMessage) and "Titanic" in m.content for m in call_args)
+
+    @pytest.mark.asyncio
+    async def test_validate_input_off_topic(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+        import agent
+
+        mock_classifier = MagicMock()
+        mock_classifier.ainvoke = AsyncMock(return_value=agent.TopicCheck(relevant=False))
+        monkeypatch.setattr(agent, "classifier", mock_classifier)
+
+        state = {"messages": [HumanMessage(content="What's the weather like?")], "summary": ""}
+        result = await agent.validate_input(state)
+
+        assert "messages" in result
+        assert len(result["messages"]) == 1
+        assert isinstance(result["messages"][0], AIMessage)
+        assert "DVD rental assistant" in result["messages"][0].content
+        mock_classifier.ainvoke.assert_called_once()
+        call_args = mock_classifier.ainvoke.call_args[0][0]
+        assert any(isinstance(m, SystemMessage) and "topic classifier" in m.content for m in call_args)
+        assert any(isinstance(m, HumanMessage) and "weather" in m.content for m in call_args)

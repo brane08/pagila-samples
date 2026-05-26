@@ -1,6 +1,6 @@
 ---
 name: genai_assistant_next_steps
-description: Analytics MCP server complete (2026-05-25); all 7 tasks done, 50 tests passing
+description: LangGraph summarization + input validation nodes complete (2026-05-26); 31 test_api.py tests passing
 type: project
 ---
 
@@ -100,7 +100,55 @@ cd genai-assistant && .venv/bin/python -m pytest tests/test_api.py tests/test_an
 - `get_revenue_summary`: uses scalar subqueries (not cross-join) for busiest month; `None` guard for empty payment table
 - `get_store_comparison`: `COALESCE` on `AVG(f.rental_rate)` to handle zero-inventory stores
 
-## What's next (after analytics server)
+## LangGraph nodes (2026-05-26) — COMPLETE ✅
+
+Two new LangGraph nodes added to `genai-assistant/src/agent.py`. Branch: `genai-assistant`.
+
+**Specs:**
+- `docs/superpowers/specs/2026-05-26-langgraph-summarization-node-design.md`
+- `docs/superpowers/specs/2026-05-26-langgraph-input-validation-node-design.md`
+
+**Plans:**
+- `docs/superpowers/plans/2026-05-26-langgraph-summarization-node.md`
+- `docs/superpowers/plans/2026-05-26-langgraph-input-validation-node.md`
+
+### Summarization node
+
+Trims old messages into a rolling `summary` field in `AgentState` after tool execution when message count exceeds `SUMMARIZE_THRESHOLD = 10`. Keeps last `KEEP_LAST_N = 4` messages, walking back to a `HumanMessage` boundary before slicing. Summary is injected as a second `SystemMessage` on subsequent agent calls via `_prepare_messages`.
+
+Key additions to `agent.py`:
+- `AgentState.summary: str` field (in `models.py`)
+- `SUMMARIZE_THRESHOLD = 10`, `KEEP_LAST_N = 4`
+- `_prepare_messages(messages, summary)` — module-level pure helper
+- `summarize_history(state)` — module-level async node using global `model` (not `bound_model`)
+- Graph: `graph.add_conditional_edges("tools", lambda s: "summarize" if len(s["messages"]) > SUMMARIZE_THRESHOLD else "agent", ...)`
+
+SSE fix in `main.py`: filter `on_chat_model_stream` events by `langgraph_node == "agent"` to prevent summarize-node tokens from leaking to the UI.
+
+### Input validation node
+
+Classifies every user message before the agent runs using `model.with_structured_output(TopicCheck)`. Off-topic queries (weather, cooking, etc.) receive a polite `AIMessage` rejection and skip the agent entirely, consuming zero tool tokens.
+
+Key additions to `agent.py`:
+- `TopicCheck(BaseModel)`: `relevant: bool = Field(description="...")`
+- `VALIDATION_PROMPT`: short topic classifier prompt
+- `classifier = model.with_structured_output(TopicCheck)` (module-level)
+- `validate_input(state)` — module-level async node; returns `{}` on-topic or `{"messages": [AIMessage(rejection)]}` off-topic
+- `_after_validate(state)` — routing helper: `END` if last message is `AIMessage`, else `"agent"`
+- Graph: `START → validate → (relevant?) → agent | END`
+
+### Test suite state (as of 2026-05-26)
+
+- `test_api.py`: **31/31 passing** (no live DB needed)
+  - `TestSummarizationNode`: 6 tests
+  - `TestValidationNode`: 5 tests (includes empty-messages guard test)
+- `test_analytics_tools.py`: **30/30 passing** (live DB required)
+
+```bash
+cd genai-assistant && .venv/bin/python -m pytest tests/test_api.py -v
+```
+
+## What's next
 
 - Customer detail card (same actor/store Angular pattern)
 - Films service unit tests

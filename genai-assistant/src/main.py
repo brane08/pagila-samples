@@ -97,9 +97,10 @@ async def _stream_agent_events(input_or_command, config: dict) -> AsyncIterator[
     async for event in agent_app.astream_events(input_or_command, config=config, version="v2"):
         kind = event["event"]
         if kind == "on_chat_model_stream":
-            chunk = event["data"]["chunk"]
-            if chunk.content:
-                yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
+            if event.get("metadata", {}).get("langgraph_node") == "agent":
+                chunk = event["data"]["chunk"]
+                if chunk.content:
+                    yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
         elif kind == "on_tool_start":
             yield f"data: {json.dumps({'type': 'tool_start', 'tool': event['name'], 'input': event['data'].get('input')})}\n\n"
         elif kind == "on_tool_end":

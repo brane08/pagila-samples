@@ -1,15 +1,15 @@
 import os
 
 from dotenv import load_dotenv
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage, SystemMessage, ToolMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import ToolMessage
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.types import Command, interrupt
 from psycopg_pool import AsyncConnectionPool
+from pydantic import BaseModel, Field
 
 from models import AgentState
 
@@ -103,6 +103,83 @@ always derive answers from tool results.
 - If a tool returns an error key, acknowledge it and suggest an alternative approach
 """
 
+SUMMARIZE_THRESHOLD = 10
+KEEP_LAST_N = 4
+
+
+class TopicCheck(BaseModel):
+    relevant: bool = Field(
+        description="True if the message relates to DVD films, actors, rentals, store inventory, customers, pricing, or availability."
+    )
+
+VALIDATION_PROMPT = (
+    "You are a topic classifier for a DVD rental store assistant. "
+    "Return relevant=true if the message relates to: DVD films, actors, rentals, "
+    "store inventory, customers, pricing, or availability. "
+    "Return relevant=false for everything else."
+)
+
+classifier = model.with_structured_output(TopicCheck)
+
+
+def _after_validate(state: AgentState) -> str:
+    if not state["messages"]:
+        return "agent"
+    return END if isinstance(state["messages"][-1], AIMessage) else "agent"
+
+
+def _prepare_messages(
+    messages: list, summary: str
+) -> list:
+    if any(isinstance(m, SystemMessage) for m in messages):
+        return messages
+    prefix = [SystemMessage(content=SYSTEM_PROMPT)]
+    if summary:
+        prefix.append(SystemMessage(content=f"Earlier conversation summary:\n{summary}"))
+    return prefix + messages
+
+
+async def summarize_history(state: AgentState) -> dict:
+    messages = state["messages"]
+    if len(messages) <= KEEP_LAST_N:
+        return {}
+    existing = state.get("summary", "")
+    keep_from = len(messages) - KEEP_LAST_N
+    while keep_from > 0 and not isinstance(messages[keep_from], HumanMessage):
+        keep_from -= 1
+    to_trim = messages[:keep_from]
+    if not to_trim:
+        return {}
+
+    prompt = "Summarize this DVD rental assistant conversation concisely:\n"
+    if existing:
+        prompt += f"Previous summary: {existing}\n\n"
+    prompt += "\n".join(
+        f"{type(m).__name__}: {m.content if isinstance(m.content, str) else str(m.content)}"
+        for m in to_trim
+    )
+
+    response = await model.ainvoke([HumanMessage(content=prompt)])
+    deletes = [RemoveMessage(id=m.id) for m in to_trim]
+    return {"summary": response.content, "messages": deletes}
+
+
+async def validate_input(state: AgentState) -> dict:
+    if not state["messages"]:
+        return {}
+    last = state["messages"][-1]
+    result: TopicCheck = await classifier.ainvoke([
+        SystemMessage(content=VALIDATION_PROMPT),
+        HumanMessage(content=str(last.content)),
+    ])
+    if not result.relevant:
+        return {"messages": [AIMessage(content=(
+            "I'm a DVD rental assistant — I can help with films, availability, "
+            "actors, stores, and customer accounts. "
+            "Is there something rental-related I can help you with?"
+        ))]}
+    return {}
+
 
 async def human_review(state: AgentState) -> dict:
     """Pause before tool execution and wait for user approval via interrupt()."""
@@ -146,9 +223,7 @@ async def build_agent(psycopg_pool: AsyncConnectionPool):
     bound_model = model.bind_tools(tools)
 
     async def call_model(state: AgentState) -> dict:
-        messages = state["messages"]
-        if not any(isinstance(m, SystemMessage) for m in messages):
-            messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
+        messages = _prepare_messages(state["messages"], state.get("summary", ""))
         response = await bound_model.ainvoke(messages)
         return {"messages": [response]}
 
@@ -156,10 +231,22 @@ async def build_agent(psycopg_pool: AsyncConnectionPool):
     graph.add_node("agent", call_model)
     graph.add_node("human_review", human_review)
     graph.add_node("tools", ToolNode(tools))
-    graph.add_edge(START, "agent")
+    graph.add_node("summarize", summarize_history)
+    graph.add_edge("summarize", "agent")
+    graph.add_node("validate", validate_input)
+    graph.add_edge(START, "validate")
+    graph.add_conditional_edges(
+        "validate",
+        _after_validate,
+        {"agent": "agent", END: END},
+    )
     graph.add_conditional_edges("agent", tools_condition, {"tools": "human_review", END: END})
     graph.add_conditional_edges("human_review", _after_review, {"tools": "tools", "agent": "agent"})
-    graph.add_edge("tools", "agent")
+    graph.add_conditional_edges(
+        "tools",
+        lambda s: "summarize" if len(s["messages"]) > SUMMARIZE_THRESHOLD else "agent",
+        {"summarize": "summarize", "agent": "agent"},
+    )
 
     checkpointer = AsyncPostgresSaver(psycopg_pool)
     await checkpointer.setup()
