@@ -6,6 +6,7 @@ import com.github.brane08.pagila.seedworks.entities.YearConverter;
 import io.ebean.annotation.DbArray;
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.time.Year;
 import java.util.List;
 
@@ -40,13 +41,13 @@ public class Film extends BaseModel {
     Integer rentalDuration;
 
     @Column(name = "rental_rate")
-    Double rentalRate;
+    BigDecimal rentalRate;
 
     @Column(name = "length", columnDefinition = "int2")
     Integer length;
 
     @Column(name = "replacement_cost")
-    Double replacementCost;
+    BigDecimal replacementCost;
 
     @Column(name = "rating_txt", columnDefinition = "varchar(10)")
     FilmRating rating;
@@ -125,11 +126,11 @@ public class Film extends BaseModel {
         this.rentalDuration = rentalDuration;
     }
 
-    public Double getRentalRate() {
+    public BigDecimal getRentalRate() {
         return rentalRate;
     }
 
-    public void setRentalRate(Double rentalRate) {
+    public void setRentalRate(BigDecimal rentalRate) {
         this.rentalRate = rentalRate;
     }
 
@@ -141,11 +142,11 @@ public class Film extends BaseModel {
         this.length = length;
     }
 
-    public Double getReplacementCost() {
+    public BigDecimal getReplacementCost() {
         return replacementCost;
     }
 
-    public void setReplacementCost(Double replacementCost) {
+    public void setReplacementCost(BigDecimal replacementCost) {
         this.replacementCost = replacementCost;
     }
 

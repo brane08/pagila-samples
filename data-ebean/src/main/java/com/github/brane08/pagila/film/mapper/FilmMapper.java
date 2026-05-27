@@ -3,10 +3,14 @@ package com.github.brane08.pagila.film.mapper;
 import com.github.brane08.pagila.film.beans.CategoryInfo;
 import com.github.brane08.pagila.film.beans.FilmInfo;
 import com.github.brane08.pagila.film.beans.FilmViewInfo;
+import com.github.brane08.pagila.film.beans.NicerFilmViewInfo;
+import com.github.brane08.pagila.film.beans.SalesByFilmCategoryInfo;
 import com.github.brane08.pagila.film.entities.Category;
 import com.github.brane08.pagila.film.entities.Film;
 import com.github.brane08.pagila.film.entities.FilmView;
 import com.github.brane08.pagila.film.entities.Language;
+import com.github.brane08.pagila.film.entities.NicerFilmView;
+import com.github.brane08.pagila.film.entities.SalesByFilmCategory;
 import com.github.brane08.pagila.seedworks.mapper.CommonConfig;
 import org.mapstruct.Mapper;
 
@@ -23,6 +27,14 @@ public interface FilmMapper {
     List<FilmViewInfo> filmViewsToInfo(List<FilmView> view);
 
     List<FilmInfo> filmsToInfos(List<Film> film);
+
+    NicerFilmViewInfo nicerFilmViewToInfo(NicerFilmView view);
+
+    List<NicerFilmViewInfo> nicerFilmViewsToInfo(List<NicerFilmView> views);
+
+    SalesByFilmCategoryInfo salesByCategoryToInfo(SalesByFilmCategory entity);
+
+    List<SalesByFilmCategoryInfo> salesByCategoryToInfos(List<SalesByFilmCategory> entities);
 
     CategoryInfo categoryToInfo(Category category);
 

@@ -3,6 +3,7 @@ package com.github.brane08.pagila.seedworks.entities;
 import com.github.brane08.pagila.film.entities.FilmRating;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
+import org.hibernate.type.descriptor.WrapperOptions;
 import org.hibernate.usertype.UserType;
 
 import java.io.Serializable;
@@ -35,17 +36,17 @@ public class FilmRatingType implements UserType<FilmRating> {
     }
 
     @Override
-    public FilmRating nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner) throws SQLException {
+    public FilmRating nullSafeGet(ResultSet rs, int position, WrapperOptions options) throws SQLException {
         String value = rs.getString(position);
         return FilmRating.fromValue(value);
     }
 
     @Override
-    public void nullSafeSet(PreparedStatement st, FilmRating value, int index, SharedSessionContractImplementor session) throws HibernateException, SQLException {
+    public void nullSafeSet(PreparedStatement st, FilmRating value, int position, WrapperOptions options) throws HibernateException, SQLException {
         if (value == null) {
-            st.setNull(index, Types.VARCHAR);
+            st.setNull(position, Types.VARCHAR);
         } else {
-            st.setString(index, value.rating());
+            st.setString(position, value.rating());
         }
     }
 

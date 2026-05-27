@@ -1,0 +1,394 @@
+= Pagila GenAI Assistant
+:toc: left
+:toc-title: Contents
+:toclevels: 3
+:icons: font
+:source-highlighter: highlight.js
+:imagesdir: docs/images
+
+A conversational AI assistant over the Pagila DVD rental database, built with
+**FastAPI**, **LangGraph**, **MCP** (Model Context Protocol), and **pgvector**.
+
+== Architecture Overview
+
+[plantuml, architecture, svg]
+....
+@startuml
+skinparam componentStyle rectangle
+
+actor Client
+
+package "FastAPI :8000" {
+  [main.py\nHTTP layer]
+}
+
+package "LangGraph Agent" {
+  [agent node\n(ChatOpenAI / OpenRouter)]
+  [ToolNode\n(MCP tools)]
+}
+
+package "MCP Servers (stdio)" {
+  [film_server.py\n14 tools]
+  [store_server.py\n6 tools]
+}
+
+database "PostgreSQL" {
+  [Pagila tables]
+  [pgvector\nfilm_descriptions]
+  [checkpoints\n(LangGraph state)]
+}
+
+Client --> [main.py\nHTTP layer]
+[main.py\nHTTP layer] --> [agent node\n(ChatOpenAI / OpenRouter)]
+[agent node\n(ChatOpenAI / OpenRouter)] --> [ToolNode\n(MCP tools)]
+[ToolNode\n(MCP tools)] --> [agent node\n(ChatOpenAI / OpenRouter)]
+[ToolNode\n(MCP tools)] --> [film_server.py\n14 tools]
+[ToolNode\n(MCP tools)] --> [store_server.py\n6 tools]
+[film_server.py\n14 tools] --> [Pagila tables]
+[film_server.py\n14 tools] --> [pgvector\nfilm_descriptions]
+[store_server.py\n6 tools] --> [Pagila tables]
+[agent node\n(ChatOpenAI / OpenRouter)] --> [checkpoints\n(LangGraph state)]
+@enduml
+....
+
+If PlantUML is not available, the request flow is:
+
+----
+HTTP Client
+    │
+    ▼
+FastAPI (main.py :8000)
+    │
+    ▼
+LangGraph Agent
+ ┌── agent node (call_model) ──► tools_condition
+ │   ChatOpenAI / OpenRouter         │
+ │   SystemPrompt (routing rules)    │ tool calls?
+ └──────────────────────────────┐    ▼
+                                └── ToolNode ──► MCP (film_server / store_server)
+                                         │               │
+                                         └───────────────┘  loop until final answer
+                                                 │
+                                           PostgreSQL
+                                     (checkpoints + pgvector)
+----
+
+== Module Layout
+
+[source]
+----
+genai-assistant/
+├── src/
+│   ├── main.py          # FastAPI app, lifespan, HTTP endpoints
+│   ├── agent.py         # LangGraph graph definition, system prompt
+│   ├── models.py        # Pydantic request/response models, AgentState
+│   ├── db.py            # Dual connection pool (asyncpg + psycopg)
+│   ├── rag.py           # pgvector indexing and semantic search
+│   ├── sessions.py      # Session list / history / delete helpers
+│   ├── film_server.py   # MCP server — film, actor, rental tools
+│   └── store_server.py  # MCP server — store, customer, payment tools
+├── tests/
+├── pyproject.toml
+└── README.adoc
+----
+
+== Entry Point: `main.py`
+
+=== Lifespan
+
+On startup (in order):
+
+. `init_asyncpg_pool()` — fast asyncio-native pool for tool queries and session reads.
+. `init_psycopg_pool()` — psycopg3 pool required by the LangGraph checkpointer
+  (`autocommit=True`, `prepare_threshold=0`).
+. `build_agent(psycopg_pool)` — compiles the LangGraph graph and opens the MCP client.
+  Returns `(agent_app, mcp_client)` stored as module-level globals.
+
+On shutdown: closes the MCP client and both pools.
+
+=== HTTP Endpoints
+
+[cols="1,1,3", options="header"]
+|===
+| Method | Path | Description
+
+| POST | `/chat` | Blocking invoke — waits for the full answer before returning.
+| POST | `/chat/stream` | SSE stream — emits `token`, `tool_start`, `tool_end`, `done` events.
+| GET  | `/sessions` | List all persisted sessions (most recently active first).
+| GET  | `/sessions/{thread_id}` | Full message history for a thread.
+| DELETE | `/sessions/{thread_id}` | Wipe all checkpoint rows for a `thread_id`.
+| GET  | `/health` | Liveness check; includes `agent_ready` flag.
+|===
+
+== LangGraph Agent: `agent.py`
+
+The graph is a minimal **ReAct loop** using LangGraph prebuilt nodes:
+
+[source]
+----
+START → agent (call_model) → tools_condition
+              ▲                     │
+              │   tool calls?  yes  ▼
+              └───────────── ToolNode
+                                    │ (no more tool calls)
+                                   END
+----
+
+=== Design decisions
+
+* The `SystemMessage` is prepended only once per thread — checked against the existing
+  message list so it is not duplicated on follow-up turns.
+* LLM is `ChatOpenAI` pointing at **OpenRouter** (`mistralai/devstral-2512` default,
+  configurable via `OPENROUTER_MODEL`). Temperature is fixed at `0` for determinism.
+* `AsyncPostgresSaver` persists the full conversation state keyed by `thread_id`.
+
+=== System Prompt
+
+The prompt is structured as a **decision tree**, not free-form instructions.
+For each intent type it names the exact tool chain to execute:
+
+[cols="2,3", options="header"]
+|===
+| Intent | Tool chain
+
+| Partial/exact title search | `search_films`
+| Plot / mood / vibe | `semantic_film_search` (RAG)
+| By genre | `list_categories` → `list_films_by_category`
+| By actor | `list_films_by_actor`
+| Film details (cast, language) | `search_films` → `get_film_details`
+| Stock check | `search_films` → `get_film_availability`
+| Actor filmography | `search_actors` → `get_actor_filmography`
+| Current customer rentals | `get_customer_current_rentals(email)`
+| Customer payments | `list_stores` → `get_customer_store_payments(email, store_id)`
+| Store inventory browse | `list_stores` → `get_store_inventory`
+| Store performance | `get_store_monthly_revenue` + `get_store_top_customers`
+|===
+
+Clarification rules are also explicit: always ask for email before any customer tool;
+always call `list_stores` before using a `store_id`; ask which film when a search
+returns multiple results.
+
+== MCP Servers
+
+Both servers are spawned as **child processes** at startup via `MultiServerMCPClient`,
+communicating over `stdio` transport. Each manages its own asyncpg connection pool.
+
+=== `film_server.py` — 14 tools
+
+[cols="2,3", options="header"]
+|===
+| Tool | Purpose
+
+| `search_films` | ILIKE title match; returns film_id, rating, length, rental_rate.
+| `get_film_details` | Full details — language, categories, full cast list.
+| `list_films_by_category` | Filter films by genre name.
+| `list_films_by_actor` | Filter films by partial actor name.
+| `get_top_rented_films` | Rental count ranking across all stores.
+| `list_categories` | Enumerate all genre names (use before `list_films_by_category`).
+| `get_film_availability` | Available vs total copies per store for one film.
+| `semantic_film_search` | Delegates to the RAG layer (`rag.py`) for plot/mood queries.
+| `search_actors` | Partial first/last name search with film count.
+| `get_actor_filmography` | All films for an actor with category and rental rate.
+| `list_top_actors` | Most prolific actors by film count.
+| `get_customer_current_rentals` | Outstanding (unreturned) rentals by customer email.
+| `get_rental_stats_by_category` | Revenue + rental count per genre, ordered by revenue.
+| `get_recently_returned_films` | Freshly returned copies; optional store filter.
+|===
+
+=== `store_server.py` — 6 tools
+
+[cols="2,3", options="header"]
+|===
+| Tool | Purpose
+
+| `list_stores` | All stores with manager name, address, city.
+| `get_store_inventory` | Films stocked with available/total copies; optional category filter.
+| `get_store_rentals` | Recent transactions with `is_outstanding` flag.
+| `get_store_top_customers` | Loyal customers ranked by rental count + total spend.
+| `get_customer_store_payments` | Full payment history for a customer at one store.
+| `get_store_monthly_revenue` | Month-by-month revenue trend, most recent first.
+|===
+
+== RAG Layer: `rag.py`
+
+Semantic search over film descriptions using local embeddings and pgvector.
+
+=== Embedding model
+
+`sentence-transformers/all-MiniLM-L6-v2` — runs entirely locally, no API key required.
+Produces 384-dimensional vectors.
+
+=== Indexing (`index_films`)
+
+Run once (or after film data changes):
+
+. Fetch all films from Pagila joining language, categories, and actors.
+. Build a LangChain `Document` per film — `page_content` concatenates title,
+  description, categories, actors, rating, length, rental rate.
+. Upsert into the `film_descriptions` PGVector collection using `film_id` as the
+  stable document ID.
+
+[source,bash]
+----
+uv run src/rag.py
+----
+
+=== Querying (`semantic_search`)
+
+Called by the `semantic_film_search` MCP tool.
+Uses `similarity_search_with_score()` and returns top-k results with:
+`film_id`, `title`, `rating`, `categories`, `description_snippet`, `similarity_score`.
+
+== Session Persistence: `sessions.py`
+
+LangGraph's `AsyncPostgresSaver` writes to three tables:
+
+[cols="1,3", options="header"]
+|===
+| Table | Content
+
+| `checkpoints` | One row per step per thread — full serialised agent state.
+| `checkpoint_blobs` | Large binary message content stored separately from the checkpoint row.
+| `checkpoint_writes` | Pending writes during an in-progress step.
+|===
+
+The `sessions.py` helpers query these directly with asyncpg:
+
+* `list_sessions` — aggregate query on `checkpoints` for thread IDs + last active timestamp.
+* `get_session_history` — calls `agent_app.aget_state()` and projects the message list
+  into `MessageRecord` objects (user / assistant / tool roles).
+* `delete_session` — deletes from all three tables for a given `thread_id`.
+
+== Connection Pools: `db.py`
+
+Two separate pools are maintained because LangGraph's checkpointer has specific
+requirements that are incompatible with general-purpose pool settings:
+
+[cols="1,1,2,2", options="header"]
+|===
+| Pool | Library | Used by | Why separate
+
+| `_asyncpg_pool` | asyncpg | MCP tool queries, session list/delete endpoints | Fast, asyncio-native, straightforward DSN config.
+| `_psycopg_pool` | psycopg3 | `AsyncPostgresSaver` (LangGraph checkpointer) | LangGraph requires psycopg3 with `autocommit=True` and `prepare_threshold=0`.
+|===
+
+== Configuration
+
+All settings are read from `.env` via `python-dotenv`:
+
+[cols="1,1,2", options="header"]
+|===
+| Variable | Default | Description
+
+| `DB_HOST` | `localhost` | PostgreSQL host
+| `DB_PORT` | `5432` | PostgreSQL port
+| `DB_NAME` | `sakila` | Database name
+| `DB_USER` | `postgres` | Database user
+| `DB_PASSWORD` | `password` | Database password
+| `OPENROUTER_API_KEY` | — | **Required.** OpenRouter API key.
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | LLM API base URL
+| `OPENROUTER_MODEL` | `mistralai/devstral-2512` | Model identifier
+|===
+
+== Running Locally
+
+[source,bash]
+----
+# 1. Install dependencies
+uv sync
+
+# 2. Populate the vector store (once)
+uv run src/rag.py
+
+# 3. Start the server
+uv run src/main.py
+# or
+uvicorn src.main:app --reload
+----
+
+The API will be available at `http://localhost:8000`.
+Interactive docs: `http://localhost:8000/docs`.
+
+== Testing
+
+=== FastAPI endpoint tests (no DB required)
+
+`tests/test_api.py` covers all HTTP endpoints using `httpx.AsyncClient` with
+`ASGITransport`. The agent, DB pool, and session functions are fully mocked — no running
+PostgreSQL or MCP servers needed.
+
+[source,bash]
+----
+# Run all tests
+uv run pytest
+
+# Run only the endpoint tests (fast, no DB)
+uv run pytest tests/test_api.py -v
+
+# Run a specific test class
+uv run pytest tests/test_api.py::TestChatStream -v
+uv run pytest tests/test_api.py::TestAdminReindex -v
+----
+
+.Endpoint test coverage
+[cols="2,3,1", options="header"]
+|===
+| Class | What is tested | DB needed?
+
+| `TestHealth`
+| `GET /health` — agent-ready flag, not-ready state
+| No
+
+| `TestAdminReindex`
+| `POST /admin/reindex` 202 + running status; 409 on concurrent call; `GET /admin/reindex` status object
+| No
+
+| `TestChatBlocking`
+| `POST /chat` answer shape; 503 when agent not initialised
+| No
+
+| `TestChatStream`
+| `text/event-stream` content-type; `token` events present; `done` terminates stream; token content matches mock; 503 guard
+| No
+
+| `TestChatConfirm`
+| `POST /chat/confirm/{id}/stream` approve + reject both return SSE; 503 guard
+| No
+
+| `TestSessions`
+| `GET /sessions` list; `DELETE /sessions/{id}` 200 + 404; `GET /sessions/{id}` 404
+| No
+|===
+
+=== MCP tool tests (live DB required)
+
+The remaining test files exercise individual MCP tools against a real PostgreSQL database.
+Ensure the DB is running and `.env` is populated before running.
+
+[source,bash]
+----
+# Requires PostgreSQL on localhost:5432 (or as configured in .env)
+uv run pytest tests/test_film_tools.py tests/test_actor_tools.py \
+              tests/test_store_tools.py tests/test_rental_tools.py -v
+----
+
+.MCP tool test files
+[cols="2,3", options="header"]
+|===
+| File | Coverage
+
+| `test_film_tools.py`
+| Film search, details, availability, semantic search (RAG), top-rented
+
+| `test_actor_tools.py`
+| Actor search, filmography, top actors
+
+| `test_store_tools.py`
+| Store inventory, top customers, monthly revenue
+
+| `test_rental_tools.py`
+| Customer rentals, payments, recently-returned films
+
+| `test_mcp.py`
+| MCP server startup, tool registration count
+|===

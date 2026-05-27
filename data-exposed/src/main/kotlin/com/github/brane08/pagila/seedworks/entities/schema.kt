@@ -1,8 +1,8 @@
 package com.github.brane08.pagila.seedworks.entities
 
-import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.javatime.timestamp
 import java.time.Instant
 
 object Languages : IntIdTable(name = "language", columnName = "language_id") {
