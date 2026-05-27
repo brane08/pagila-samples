@@ -1,0 +1,79 @@
+### Health check
+GET http://localhost:8000/health
+Accept: application/json
+
+###
+
+### Chat — synchronous (creates/continues thread "default")
+POST http://localhost:8000/chat
+Content-Type: application/json
+
+{
+  "message": "What are the top 5 most rented films?",
+  "thread_id": "default"
+}
+
+###
+
+### Chat — synchronous, named session
+POST http://localhost:8000/chat
+Content-Type: application/json
+
+{
+  "message": "Show me action films",
+  "thread_id": "alice"
+}
+
+###
+
+### Chat — follow-up in the same session (context is preserved)
+POST http://localhost:8000/chat
+Content-Type: application/json
+
+{
+  "message": "Which of those are available to rent right now?",
+  "thread_id": "alice"
+}
+
+###
+
+### Chat — semantic/vibe search
+POST http://localhost:8000/chat
+Content-Type: application/json
+
+{
+  "message": "I want something with a road trip and comedy vibes",
+  "thread_id": "alice"
+}
+
+###
+
+### Chat — streaming (SSE)
+POST http://localhost:8000/chat/stream
+Content-Type: application/json
+Accept: text/event-stream
+
+{
+  "message": "Tell me about films starring Penelope Cruz",
+  "thread_id": "streaming-test"
+}
+
+###
+
+### Sessions — list all active sessions
+GET http://localhost:8000/sessions
+Accept: application/json
+
+###
+
+### Sessions — get history for a session
+GET http://localhost:8000/sessions/alice
+Accept: application/json
+
+###
+
+### Sessions — delete a session
+DELETE http://localhost:8000/sessions/alice
+Accept: application/json
+
+###

@@ -1,7 +1,13 @@
+// Prevent Bootstrap link-colour bleed onto Material anchor buttons (MDC class names, Angular Material 15+)
 a {
-  &.mat-button, &.mat-raised-button, &.mat-fab, &.mat-mini-fab, &.mat-list-item {
+  &.mat-mdc-button,
+  &.mat-mdc-raised-button,
+  &.mat-mdc-outlined-button,
+  &.mat-mdc-fab,
+  &.mat-mdc-mini-fab,
+  &.mat-mdc-list-item {
     &:hover {
-      color: currentColor
+      color: currentColor;
     }
   }
 }

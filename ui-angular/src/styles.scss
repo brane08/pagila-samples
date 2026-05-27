@@ -23,7 +23,43 @@
 @import "styles/boot-theme";
 
 @import "bootstrap-icons/font/bootstrap-icons";
+@import "@fortawesome/fontawesome-free/css/all.min.css";
 
 html, body {
   height: 100%;
+}
+
+// ── AI chat dialog ────────────────────────────────────────────────────────────
+
+.chat-dialog-panel {
+  .mat-mdc-dialog-container {
+    padding: 0;
+  }
+
+  .mdc-dialog__surface {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // fill the configured height
+  .mat-mdc-dialog-container,
+  .mdc-dialog__surface,
+  app-chat,
+  .chat-dialog {
+    height: 100%;
+  }
+}
+
+// toolbar spacer
+.flex-spacer {
+  flex: 1 1 auto;
+}
+
+.clickable-row {
+  cursor: pointer;
+
+  &:hover td {
+    background: rgba(0, 0, 0, 0.04);
+  }
 }

@@ -1,0 +1,29 @@
+<div class="mat-elevation-z8 mt-3 mb-3">
+  @if (staffResource.isLoading()) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  }
+  <table [dataSource]="staffResource.value() ?? []" mat-table>
+    <ng-container matColumnDef="id">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>ID</th>
+      <td *matCellDef="let element" mat-cell>{{ element.id }}</td>
+    </ng-container>
+    <ng-container matColumnDef="name">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>Name</th>
+      <td *matCellDef="let element" mat-cell>{{ element.name }}</td>
+    </ng-container>
+    <ng-container matColumnDef="city">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>City</th>
+      <td *matCellDef="let element" mat-cell>{{ element.city }}</td>
+    </ng-container>
+    <ng-container matColumnDef="country">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>Country</th>
+      <td *matCellDef="let element" mat-cell>{{ element.country }}</td>
+    </ng-container>
+    <ng-container matColumnDef="phone">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>Phone</th>
+      <td *matCellDef="let element" mat-cell>{{ element.phone }}</td>
+    </ng-container>
+    <tr *matHeaderRowDef="displayedColumns" mat-header-row></tr>
+    <tr *matRowDef="let row; columns: displayedColumns;" mat-row [routerLink]="['..', row.sid]" style="cursor:pointer"></tr>
+  </table>
+</div>

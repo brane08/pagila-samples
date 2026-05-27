@@ -2,6 +2,7 @@ package com.github.brane08.pagila.seedworks.entities;
 
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
+import org.hibernate.type.descriptor.WrapperOptions;
 import org.hibernate.usertype.UserType;
 
 import java.io.Serializable;
@@ -37,20 +38,20 @@ public class StringArrayType implements UserType<String[]> {
     }
 
     @Override
-    public String[] nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner) throws SQLException {
+    public String[] nullSafeGet(ResultSet rs, int position, WrapperOptions options) throws SQLException {
         Array array = rs.getArray(position);
         return array != null ? (String[]) array.getArray() : null;
     }
 
     @Override
-    public void nullSafeSet(PreparedStatement st, String[] value, final int index, SharedSessionContractImplementor session) throws HibernateException, SQLException {
+    public void nullSafeSet(PreparedStatement st, String[] value, int position, WrapperOptions options) throws HibernateException, SQLException {
         if (value != null) {
-            session.doWork(connection -> {
+            options.getSession().doWork(connection -> {
                 Array array = connection.createArrayOf("text", (String[]) value);
-                st.setArray(index, array);
+                st.setArray(position, array);
             });
         } else {
-            st.setNull(index, getSqlType());
+            st.setNull(position, getSqlType());
         }
     }
 

@@ -1,5 +1,6 @@
 package com.github.brane08.pagila.store.entities;
 
+import com.github.brane08.pagila.seedworks.entities.Address;
 import com.github.brane08.pagila.seedworks.entities.BaseModel;
 import jakarta.persistence.*;
 
@@ -22,6 +23,10 @@ public class Staff extends BaseModel {
 
     @Column(name = "email")
     String email;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "address_id", columnDefinition = "int2")
+    Address address;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "store_id")
@@ -69,6 +74,14 @@ public class Staff extends BaseModel {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
     }
 
     public Store getStore() {

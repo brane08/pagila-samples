@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "film_list")
 public class FilmView {
@@ -19,10 +21,10 @@ public class FilmView {
     @Column(name = "category")
     private String category;
     @Column(name = "price")
-    private Float price;
+    private BigDecimal price;
     @Column(name = "length")
     private Short length;
-    @Column(name = "rating_txt", columnDefinition = "varchar(10")
+    @Column(name = "rating_txt", columnDefinition = "varchar(10)")
     private FilmRating rating;
     @Column(name = "actors")
     private String actors;
@@ -59,11 +61,11 @@ public class FilmView {
         this.category = category;
     }
 
-    public Float getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(Float price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
 

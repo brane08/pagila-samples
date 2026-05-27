@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.8</version>
+    <version>4.0.6</version>
     <relativePath/>
   </parent>
   <groupId>com.github.brane08.pagila</groupId>
@@ -16,7 +16,7 @@
 
   <properties>
     <java.version>25</java.version>
-    <vaadin.version>24.9.6</vaadin.version>
+    <vaadin.version>25.1.4</vaadin.version>
   </properties>
 
   <repositories>
@@ -62,7 +62,7 @@
     <dependency>
       <groupId>io.ebean</groupId>
       <artifactId>ebean-postgres</artifactId>
-      <version>17.2.0</version>
+      <version>17.5.0</version>
     </dependency>
 
     <dependency>
@@ -93,7 +93,7 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>2.46.1</version>
+        <version>3.4.0</version>
         <configuration>
           <java>
             <eclipse>
@@ -145,9 +145,7 @@
                 <version>.*[\.|-]+[M|m|RC|rc|b|B]+[\.|-]*\d*</version>
               </ignoreVersion>
             </ignoreVersions>
-            <comparisonMethod>maven</comparisonMethod>
           </ruleSet>
-          <comparisonMethod>maven</comparisonMethod>
           <processDependencyManagement>false</processDependencyManagement>
           <processDependencyManagementTransitive>false</processDependencyManagementTransitive>
         </configuration>

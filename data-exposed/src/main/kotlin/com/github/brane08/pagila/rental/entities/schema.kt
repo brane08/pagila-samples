@@ -3,9 +3,9 @@ package com.github.brane08.pagila.rental.entities
 import com.github.brane08.pagila.store.entities.Customers
 import com.github.brane08.pagila.store.entities.Inventory
 import com.github.brane08.pagila.store.entities.Staffs
-import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.javatime.timestamp
 import java.math.BigDecimal
 import java.time.Instant
 

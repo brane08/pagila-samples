@@ -1,0 +1,56 @@
+.sessions-header {
+  min-height: 48px;
+  border-bottom-color: var(--mat-sys-outline-variant) !important;
+  background: var(--mat-sys-surface-container-low);
+}
+
+// compact icon buttons in the header
+.header-btn {
+  --mdc-icon-button-state-layer-size: 32px;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+}
+
+.session-item {
+  cursor: pointer;
+  transition: background 0.1s;
+  min-height: 44px;
+  border-bottom-color: var(--mat-sys-outline-variant) !important;
+  color: var(--mat-sys-on-surface);
+
+  &:hover {
+    background: color-mix(in srgb, var(--mat-sys-on-surface) 6%, transparent);
+
+    .session-delete {
+      opacity: 1 !important;
+    }
+  }
+
+  &.session-active {
+    background: var(--mat-sys-primary-container);
+    border-left: 3px solid var(--mat-sys-primary) !important;
+
+    .session-id {
+      color: var(--mat-sys-on-primary-container);
+    }
+  }
+}
+
+.session-delete {
+  transition: opacity 0.15s;
+  --mdc-icon-button-state-layer-size: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 2px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spinning mat-icon {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}

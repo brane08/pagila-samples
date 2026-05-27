@@ -1,0 +1,17 @@
+<div class="mat-elevation-z8 mt-3 mb-3">
+  @if (salesResource.isLoading()) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  }
+  <table [dataSource]="salesResource.value() ?? []" mat-table>
+    <ng-container matColumnDef="category">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>Category</th>
+      <td *matCellDef="let element" mat-cell>{{ element.category }}</td>
+    </ng-container>
+    <ng-container matColumnDef="totalSales">
+      <th *matHeaderCellDef class="fw-bold" mat-header-cell>Total Sales</th>
+      <td *matCellDef="let element" mat-cell>{{ element.totalSales | currency }}</td>
+    </ng-container>
+    <tr *matHeaderRowDef="displayedColumns" mat-header-row></tr>
+    <tr *matRowDef="let row; columns: displayedColumns;" mat-row></tr>
+  </table>
+</div>

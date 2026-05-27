@@ -1,6 +1,8 @@
 package com.github.brane08.pagila.rental.mapper;
 
+import com.github.brane08.pagila.rental.beans.CustomerViewInfo;
 import com.github.brane08.pagila.rental.beans.RentalInfo;
+import com.github.brane08.pagila.rental.entities.CustomerView;
 import com.github.brane08.pagila.rental.entities.Rental;
 import com.github.brane08.pagila.seedworks.mapper.CommonConfig;
 import org.mapstruct.Mapper;
@@ -13,4 +15,8 @@ public interface RentalMapper {
     RentalInfo rentalToInfo(Rental rental);
 
     List<RentalInfo> rentalsToInfos(List<Rental> rentals);
+
+    CustomerViewInfo customerViewToInfo(CustomerView view);
+
+    List<CustomerViewInfo> customerViewsToInfos(List<CustomerView> views);
 }

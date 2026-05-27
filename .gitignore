@@ -55,3 +55,41 @@ jmeter.log
 lib/
 /*.http
 .bsp/
+.venv
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+out/
+
+# AI files
+.aider*
+claude-cli.txt
+
+.claude/**
+!.claude/settings.json
+!.claude/memory/
+!.claude/memory/**
+
+genai-assistant/test-results/
+ui-angular/test-results/
+
+playwright-report/

@@ -1,1 +1,92 @@
-<p>card works!</p>
+@if (filmResource.isLoading()) {
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+}
+
+@if (filmResource.value(); as film) {
+  <div class="film-card-container">
+    <button mat-stroked-button class="back-btn" (click)="back()">
+      <mat-icon>arrow_back</mat-icon> Back
+    </button>
+
+    <mat-card class="film-card mt-3">
+      <mat-card-header>
+        <mat-card-title>{{ film.title }}</mat-card-title>
+        <mat-card-subtitle>
+          <span class="rating-badge">{{ film.rating }}</span>
+          @if (film.releaseYear) { {{ film.releaseYear }} · }
+          {{ film.language }}
+          @if (film.length) { · {{ film.length }} min }
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <p class="description">{{ film.description }}</p>
+
+        <mat-divider class="my-divider"></mat-divider>
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Rental Rate</span>
+            <span class="meta-value">\${{ film.rentalRate | number:'1.2-2' }} / day</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Rental Duration</span>
+            <span class="meta-value">{{ film.rentalDuration }} days</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Replacement Cost</span>
+            <span class="meta-value">\${{ film.replacementCost | number:'1.2-2' }}</span>
+          </div>
+          @if (film.originalLanguage) {
+            <div class="meta-item">
+              <span class="meta-label">Original Language</span>
+              <span class="meta-value">{{ film.originalLanguage }}</span>
+            </div>
+          }
+        </div>
+
+        @if (film.categories?.length) {
+          <div class="chips-section">
+            <span class="chips-label">Genres</span>
+            <mat-chip-set>
+              @for (cat of film.categories; track cat) {
+                <mat-chip>{{ cat }}</mat-chip>
+              }
+            </mat-chip-set>
+          </div>
+        }
+
+        @if (film.specialFeatures?.length) {
+          <div class="chips-section">
+            <span class="chips-label">Special Features</span>
+            <mat-chip-set>
+              @for (feat of film.specialFeatures; track feat) {
+                <mat-chip>{{ feat }}</mat-chip>
+              }
+            </mat-chip-set>
+          </div>
+        }
+
+        @if (actorsResource.value()?.length) {
+          <mat-divider class="my-divider"></mat-divider>
+          <div class="actors-section">
+            <span class="chips-label">Cast</span>
+            <div class="actors-list">
+              @for (actor of actorsResource.value()!; track actor.actorId) {
+                <span class="actor-chip">{{ actor.firstName }} {{ actor.lastName }}</span>
+              }
+            </div>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+}
+
+@if (filmResource.error()) {
+  <div class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <span>Film not found.</span>
+    <button mat-stroked-button (click)="back()">Go back</button>
+  </div>
+}

@@ -1,0 +1,45 @@
+@if (actorResource.isLoading()) {
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+}
+
+@if (actorResource.value(); as actor) {
+  <div class="actor-card-container">
+    <button mat-stroked-button class="back-btn" (click)="back()">
+      <mat-icon>arrow_back</mat-icon> Back
+    </button>
+
+    <mat-card class="actor-card mt-3">
+      <mat-card-header>
+        <mat-card-title>{{ actor.firstName }} {{ actor.lastName }}</mat-card-title>
+        <mat-card-subtitle>Actor #{{ actor.actorId }}</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        @if (filmGroups().length) {
+          <mat-divider class="my-divider"></mat-divider>
+          <div class="filmography-section">
+            <span class="section-label">Filmography</span>
+            @for (group of filmGroups(); track group.category) {
+              <div class="film-group">
+                <span class="category-label">{{ group.category }}</span>
+                <mat-chip-set>
+                  @for (film of group.films; track film) {
+                    <mat-chip>{{ film }}</mat-chip>
+                  }
+                </mat-chip-set>
+              </div>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+}
+
+@if (actorResource.error()) {
+  <div class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <span>Actor not found.</span>
+    <button mat-stroked-button (click)="back()">Go back</button>
+  </div>
+}

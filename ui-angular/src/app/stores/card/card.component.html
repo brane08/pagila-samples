@@ -1,0 +1,68 @@
+@if (storeResource.isLoading()) {
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+}
+
+@if (storeResource.value(); as store) {
+  <div class="store-card-container">
+    <button mat-stroked-button class="back-btn" (click)="back()">
+      <mat-icon>arrow_back</mat-icon> Back
+    </button>
+
+    <mat-card class="store-card mt-3">
+      <mat-card-header>
+        <mat-card-title>Store {{ store.storeId }}</mat-card-title>
+        @if (store.address?.city) {
+          <mat-card-subtitle>
+            {{ store.address.city.city }}@if (store.address.district) {, {{ store.address.district }}}
+            · {{ store.address.city.country.country }}
+          </mat-card-subtitle>
+        }
+      </mat-card-header>
+
+      <mat-card-content>
+        <mat-divider class="my-divider"></mat-divider>
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Manager</span>
+            <span class="meta-value">{{ store.manager.firstName }} {{ store.manager.lastName }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Phone</span>
+            <span class="meta-value">{{ store.address?.phone || '—' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Address</span>
+            <span class="meta-value">{{ store.address?.address }}</span>
+          </div>
+          @if (store.address?.postalCode) {
+            <div class="meta-item">
+              <span class="meta-label">Postal Code</span>
+              <span class="meta-value">{{ store.address.postalCode }}</span>
+            </div>
+          }
+        </div>
+
+        @if (store.currentStaff?.length) {
+          <mat-divider class="my-divider"></mat-divider>
+          <div class="staff-section">
+            <span class="section-label">Current Staff</span>
+            <div class="staff-list">
+              @for (staff of store.currentStaff; track staff.staffId) {
+                <span class="staff-chip">{{ staff.firstName }} {{ staff.lastName }}</span>
+              }
+            </div>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+}
+
+@if (storeResource.error()) {
+  <div class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <span>Store not found.</span>
+    <button mat-stroked-button (click)="back()">Go back</button>
+  </div>
+}

@@ -1,10 +1,15 @@
 <mat-toolbar color="accent">
-  <div class="container">
+  <div class="container d-flex align-items-center">
     <span class="me-1">Film Library</span>
     <a class="me-1" color="accent" href="/" mat-button>Home</a>
     <a class="me-1" color="accent" href="/films" mat-button>Films</a>
     <a class="me-1" color="accent" href="/actors" mat-button>Actors</a>
+    <a class="me-1" color="accent" href="/stores" mat-button>Stores</a>
     <a class="me-1" color="accent" href="/customers" mat-button>Customers</a>
+    <span class="flex-spacer"></span>
+    <button mat-icon-button color="accent" (click)="openChat()" matTooltip="AI Assistant" aria-label="Open AI Assistant">
+      <mat-icon>smart_toy</mat-icon>
+    </button>
   </div>
 </mat-toolbar>
 <div class="container">

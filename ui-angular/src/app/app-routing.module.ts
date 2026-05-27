@@ -6,7 +6,9 @@ import { provideCharts, withDefaultRegisterables, } from 'ng2-charts';
 const routes: Routes = [
   { path: "", component: HomeComponent, pathMatch: "full" },
   { path: "films", loadChildren: () => import("./films/films.module").then(m => m.FilmsModule) },
-  { path: "actors", loadChildren: () => import("./actors/actors.module").then(m => m.ActorsModule) }
+  { path: "actors", loadChildren: () => import("./actors/actors.module").then(m => m.ActorsModule) },
+  { path: "stores", loadChildren: () => import("./stores/stores.module").then(m => m.StoresModule) },
+  { path: "customers", loadChildren: () => import("./customers/customers.module").then(m => m.CustomersModule) }
 ];
 
 @NgModule({

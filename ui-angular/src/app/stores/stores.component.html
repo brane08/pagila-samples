@@ -1,0 +1,11 @@
+<nav mat-tab-nav-bar [tabPanel]="tabPanel" class="mt-3">
+  <a mat-tab-link routerLink="sales" routerLinkActive #rlaSales="routerLinkActive" [active]="rlaSales.isActive">
+    <i class="bi bi-bar-chart me-1"></i> Sales by Store
+  </a>
+  <a mat-tab-link routerLink="staff" routerLinkActive #rlaStaff="routerLinkActive" [active]="rlaStaff.isActive">
+    <i class="bi bi-person-badge me-1"></i> Staff
+  </a>
+</nav>
+<mat-tab-nav-panel #tabPanel>
+  <router-outlet></router-outlet>
+</mat-tab-nav-panel>

@@ -1,6 +1,8 @@
 package com.github.brane08.pagila.rental.entities;
 
 import com.github.brane08.pagila.seedworks.entities.BaseModel;
+import com.github.brane08.pagila.store.entities.Inventory;
+import com.github.brane08.pagila.store.entities.Staff;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -17,63 +19,54 @@ public class Rental extends BaseModel {
     @Column(name = "rental_date")
     Instant rentalDate;
 
-    @Column(name = "inventory_id")
+    @Column(name = "inventory_id", insertable = false, updatable = false)
     Integer inventoryId;
 
-    @Column(name = "customer_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "inventory_id")
+    Inventory inventory;
+
+    @Column(name = "customer_id", insertable = false, updatable = false)
     Integer customerId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    Customer customer;
 
     @Column(name = "return_date")
     Instant returnDate;
 
-    @Column(name = "staff_id")
+    @Column(name = "staff_id", insertable = false, updatable = false)
     Integer staffId;
 
-    public Integer getRentalId() {
-        return rentalId;
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "staff_id")
+    Staff staff;
 
-    public void setRentalId(Integer rentalId) {
-        this.rentalId = rentalId;
-    }
+    public Integer getRentalId() { return rentalId; }
+    public void setRentalId(Integer rentalId) { this.rentalId = rentalId; }
 
-    public Instant getRentalDate() {
-        return rentalDate;
-    }
+    public Instant getRentalDate() { return rentalDate; }
+    public void setRentalDate(Instant rentalDate) { this.rentalDate = rentalDate; }
 
-    public void setRentalDate(Instant rentalDate) {
-        this.rentalDate = rentalDate;
-    }
+    public Integer getInventoryId() { return inventoryId; }
+    public void setInventoryId(Integer inventoryId) { this.inventoryId = inventoryId; }
 
-    public Integer getInventoryId() {
-        return inventoryId;
-    }
+    public Inventory getInventory() { return inventory; }
+    public void setInventory(Inventory inventory) { this.inventory = inventory; }
 
-    public void setInventoryId(Integer inventoryId) {
-        this.inventoryId = inventoryId;
-    }
+    public Integer getCustomerId() { return customerId; }
+    public void setCustomerId(Integer customerId) { this.customerId = customerId; }
 
-    public Integer getCustomerId() {
-        return customerId;
-    }
+    public Customer getCustomer() { return customer; }
+    public void setCustomer(Customer customer) { this.customer = customer; }
 
-    public void setCustomerId(Integer customerId) {
-        this.customerId = customerId;
-    }
+    public Instant getReturnDate() { return returnDate; }
+    public void setReturnDate(Instant returnDate) { this.returnDate = returnDate; }
 
-    public Instant getReturnDate() {
-        return returnDate;
-    }
+    public Integer getStaffId() { return staffId; }
+    public void setStaffId(Integer staffId) { this.staffId = staffId; }
 
-    public void setReturnDate(Instant returnDate) {
-        this.returnDate = returnDate;
-    }
-
-    public Integer getStaffId() {
-        return staffId;
-    }
-
-    public void setStaffId(Integer staffId) {
-        this.staffId = staffId;
-    }
+    public Staff getStaff() { return staff; }
+    public void setStaff(Staff staff) { this.staff = staff; }
 }
