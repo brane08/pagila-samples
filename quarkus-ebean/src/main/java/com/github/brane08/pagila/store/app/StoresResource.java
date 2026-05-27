@@ -29,7 +29,7 @@ public class StoresResource {
     public Response page(@QueryParam("qry") @DefaultValue("") String qry,
                          @QueryParam("page") @DefaultValue("1") int page,
                          @QueryParam("size") @DefaultValue("20") int size,
-                         @QueryParam("sort") @DefaultValue("id") String sort,
+                         @QueryParam("sort") @DefaultValue("storeId") String sort,
                          @QueryParam("direction") @DefaultValue("1") int direction) {
         FiqlQueryBean fiqlBean = FiqlQueryBean.build(qry, page, size, sort, direction);
         PagedList<StoreInfo> list = repository.page(fiqlBean.qry, fiqlBean.pageInfo(), mapper::storeToInfo);
@@ -55,7 +55,7 @@ public class StoresResource {
     }
 
     @GET
-    @Path("/{storeId}")
+    @Path("/{storeId: \\d+}")
     public Response getById(@PathParam("storeId") int storeId) {
         Optional<StoreInfo> found = repository.findById(storeId, mapper::storeToInfo);
         return found.map(s -> Response.ok(ApiResult.single(s)).build())
@@ -63,19 +63,19 @@ public class StoresResource {
     }
 
     @GET
-    @Path("/{storeId}/inventory")
+    @Path("/{storeId: \\d+}/inventory")
     public Response storeInventory(@PathParam("storeId") int storeId) {
         return Response.ok(ApiResult.array(repository.getStoreInventory(storeId))).build();
     }
 
     @GET
-    @Path("/{storeId}/rentals")
+    @Path("/{storeId: \\d+}/rentals")
     public Response storeRentals(@PathParam("storeId") int storeId) {
         return Response.ok(ApiResult.array(repository.getStoreRentals(storeId))).build();
     }
 
     @GET
-    @Path("/{storeId}/customers")
+    @Path("/{storeId: \\d+}/customers")
     public Response storeCustomers(@PathParam("storeId") int storeId) {
         return Response.ok(ApiResult.array(repository.getStoreTopCustomers(storeId))).build();
     }

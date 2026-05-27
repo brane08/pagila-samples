@@ -37,14 +37,6 @@ public class ActorsResource {
     }
 
     @GET
-    @Path("/{actorId}")
-    public Response getById(@PathParam("actorId") int actorId) {
-        return repository.findActorViewById(actorId)
-                .map(a -> Response.ok(ApiResult.single(a)).build())
-                .orElse(Response.status(Response.Status.NOT_FOUND).build());
-    }
-
-    @GET
     @Path("/@view")
     public Response listViews(@QueryParam("page") @DefaultValue("1") int page,
                               @QueryParam("size") @DefaultValue("20") int size,
@@ -54,5 +46,13 @@ public class ActorsResource {
         PagedList<ActorViewInfo> list = repository.listActorViews(
                 fiqlBean.pageInfo().offset(), fiqlBean.pageInfo().size(), fiqlBean.pageInfo().order());
         return Response.ok(ApiResult.array(list.list(), list.totalCount())).build();
+    }
+
+    @GET
+    @Path("/{actorId: \\d+}")
+    public Response getById(@PathParam("actorId") int actorId) {
+        return repository.findActorViewById(actorId)
+                .map(a -> Response.ok(ApiResult.single(a)).build())
+                .orElse(Response.status(Response.Status.NOT_FOUND).build());
     }
 }

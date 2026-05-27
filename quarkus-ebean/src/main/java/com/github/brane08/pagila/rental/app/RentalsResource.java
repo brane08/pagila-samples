@@ -29,7 +29,7 @@ public class RentalsResource {
     public Response page(@QueryParam("qry") @DefaultValue("") String qry,
                          @QueryParam("page") @DefaultValue("1") int page,
                          @QueryParam("size") @DefaultValue("20") int size,
-                         @QueryParam("sort") @DefaultValue("id") String sort,
+                         @QueryParam("sort") @DefaultValue("rentalId") String sort,
                          @QueryParam("direction") @DefaultValue("1") int direction) {
         FiqlQueryBean fiqlBean = FiqlQueryBean.build(qry, page, size, sort, direction);
         PagedList<RentalInfo> list = repository.page(fiqlBean.qry, fiqlBean.pageInfo(), mapper::rentalToInfo);

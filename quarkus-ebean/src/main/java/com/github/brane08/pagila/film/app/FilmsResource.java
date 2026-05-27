@@ -29,7 +29,7 @@ public class FilmsResource {
     }
 
     @GET
-    @Path("{film_id}")
+    @Path("/{film_id: \\d+}")
     public Response getById(@PathParam("film_id") int filmId) {
         return Response.ok(repository.findById(filmId)).build();
     }
@@ -76,7 +76,7 @@ public class FilmsResource {
     }
 
     @GET
-    @Path("/{film_id}/actors")
+    @Path("/{film_id: \\d+}/actors")
     public Response listActors(@PathParam("film_id") int filmId) {
         return Response.ok(ApiResult.array(repository.listActors(filmId))).build();
     }
