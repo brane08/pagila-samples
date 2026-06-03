@@ -7,6 +7,7 @@ from typing import AsyncIterator
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from langchain_core.messages import HumanMessage
 
 from langgraph.types import Command
@@ -15,6 +16,7 @@ from agent import build_agent
 from db import close_pools, get_asyncpg_pool, init_asyncpg_pool, init_psycopg_pool
 from models import ChatRequest, ChatResponse, ConfirmRequest, ReindexStatus, SessionListResponse
 from sessions import delete_session, get_session_history, list_sessions
+from ui_routes import ui_router
 
 # ── App state ──────────────────────────────────────────────────────────────────
 
@@ -27,10 +29,10 @@ _reindex_job: ReindexStatus = ReindexStatus(status="idle")
 async def lifespan(app: FastAPI):
     global agent_app, mcp_client
     print("Starting up: initialising DB connection pools...")
-    await init_asyncpg_pool()
+    asyncpg_pool = await init_asyncpg_pool()
     psycopg_pool = await init_psycopg_pool()
     print("Building LangGraph agent...")
-    agent_app, mcp_client = await build_agent(psycopg_pool)
+    agent_app, mcp_client = await build_agent(psycopg_pool, asyncpg_pool=asyncpg_pool)
     print("Agent ready.")
     yield
     print("Shutting down...")
@@ -52,6 +54,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/static", StaticFiles(directory="src/static"), name="static")
+app.include_router(ui_router)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -82,7 +87,7 @@ async def health():
 async def chat(request: ChatRequest):
     _require_agent()
     result = await agent_app.ainvoke(
-        {"messages": [HumanMessage(content=request.message)]},
+        {"messages": [HumanMessage(content=request.message)], "user_id": request.user_id},
         config={"configurable": {"thread_id": request.thread_id}},
     )
     messages = result["messages"]
@@ -94,12 +99,14 @@ async def chat(request: ChatRequest):
 
 async def _stream_agent_events(input_or_command, config: dict) -> AsyncIterator[str]:
     """Shared SSE generator: streams token/tool events, then emits done or tool_confirm."""
+    agent_streamed_any = False
     async for event in agent_app.astream_events(input_or_command, config=config, version="v2"):
         kind = event["event"]
         if kind == "on_chat_model_stream":
             if event.get("metadata", {}).get("langgraph_node") == "agent":
                 chunk = event["data"]["chunk"]
                 if chunk.content:
+                    agent_streamed_any = True
                     yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
         elif kind == "on_tool_start":
             yield f"data: {json.dumps({'type': 'tool_start', 'tool': event['name'], 'input': event['data'].get('input')})}\n\n"
@@ -113,6 +120,13 @@ async def _stream_agent_events(input_or_command, config: dict) -> AsyncIterator[
         thread_id = config["configurable"]["thread_id"]
         yield f"data: {json.dumps({'type': 'tool_confirm', 'thread_id': thread_id, 'tool_calls': interrupt_value.get('tool_calls', [])})}\n\n"
     else:
+        if not agent_streamed_any:
+            msgs = state.values.get("messages", []) if state.values else []
+            if msgs:
+                from langchain_core.messages import AIMessage as _AI
+                last = msgs[-1]
+                if isinstance(last, _AI) and not getattr(last, "tool_calls", None) and last.content:
+                    yield f"data: {json.dumps({'type': 'token', 'content': last.content})}\n\n"
         yield 'data: {"type": "done"}\n\n'
 
 
@@ -121,7 +135,10 @@ async def chat_stream(request: ChatRequest):
     _require_agent()
     config = {"configurable": {"thread_id": request.thread_id}}
     return StreamingResponse(
-        _stream_agent_events({"messages": [HumanMessage(content=request.message)]}, config),
+        _stream_agent_events(
+            {"messages": [HumanMessage(content=request.message)], "user_id": request.user_id},
+            config,
+        ),
         media_type="text/event-stream",
     )
 

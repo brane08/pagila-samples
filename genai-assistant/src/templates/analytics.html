@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pagila Analytics</title>
+  <link rel="stylesheet" href="/static/vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/vendor/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/static/chat.css">
+  <script src="/static/vendor/chart.min.js" defer></script>
+</head>
+<body class="bg-light">
+
+<div class="d-flex vh-100 overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside class="bg-white border-end d-flex flex-column flex-shrink-0" style="width:230px;min-width:180px;">
+    <div class="p-2 border-bottom">
+      <span class="small fw-semibold text-muted text-uppercase">Navigation</span>
+    </div>
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item border-0 p-0">
+        <a href="/ui"
+           class="list-group-item list-group-item-action d-flex align-items-center gap-2 px-2 py-2 border-0">
+          <i class="bi bi-chat-left-text text-muted small"></i>
+          <span class="small">Chat</span>
+        </a>
+      </li>
+      <li class="list-group-item border-0 p-0">
+        <a href="/ui/analytics"
+           class="list-group-item list-group-item-action active d-flex align-items-center gap-2 px-2 py-2 border-0">
+          <i class="bi bi-bar-chart-fill small"></i>
+          <span class="small">Analytics</span>
+        </a>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Main -->
+  <main class="d-flex flex-column flex-grow-1 overflow-hidden">
+
+    <header class="bg-primary text-white px-3 py-2 d-flex align-items-center gap-2 flex-shrink-0">
+      <i class="bi bi-bar-chart-fill fs-5"></i>
+      <span class="fw-semibold">Pagila Analytics</span>
+    </header>
+
+    <div class="flex-grow-1 overflow-y-auto p-3">
+
+      <!-- Revenue summary cards -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+              <div class="text-muted small mb-1">Total Revenue</div>
+              <div class="fs-4 fw-bold">${{ "%.2f" % revenue.total_revenue }}</div>
+              <div class="text-muted small">avg ${{ "%.2f" % revenue.avg_per_rental }} / rental</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+              <div class="text-muted small mb-1">Total Payments</div>
+              <div class="fs-4 fw-bold">{{ revenue.total_rentals }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+              <div class="text-muted small mb-1">Busiest Month</div>
+              <div class="fs-4 fw-bold">{{ revenue.busiest_month or "—" }}</div>
+              {% if revenue.busiest_month_revenue %}
+              <div class="text-muted small">${{ "%.2f" % revenue.busiest_month_revenue }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Store comparison -->
+      <div class="card mb-4 shadow-sm">
+        <div class="card-header fw-semibold small">Store Comparison</div>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Store</th><th>City</th><th>Manager</th>
+                <th>Revenue</th><th>Rentals</th>
+                <th>Customers</th><th>Outstanding</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in stores %}
+              <tr>
+                <td>{{ s.store_id }}</td>
+                <td>{{ s.city }}</td>
+                <td>{{ s.manager }}</td>
+                <td>${{ "%.2f" % s.total_revenue }}</td>
+                <td>{{ s.rental_count }}</td>
+                <td>{{ s.unique_customers }}</td>
+                <td>{{ s.outstanding_rentals }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="7" class="text-muted small fst-italic text-center">No data.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Category chart -->
+      <div class="card mb-4 shadow-sm">
+        <div class="card-header fw-semibold small">Revenue by Category</div>
+        <div class="card-body" style="min-height:300px">
+          <canvas id="category-chart"></canvas>
+        </div>
+      </div>
+      <script id="category-data" type="application/json">{{ categories | tojson }}</script>
+      <script>
+        document.addEventListener("DOMContentLoaded", function () {
+          const raw = JSON.parse(document.getElementById("category-data").textContent);
+          new Chart(document.getElementById("category-chart"), {
+            type: "bar",
+            data: {
+              labels: raw.map(d => d.category),
+              datasets: [{
+                label: "Revenue ($)",
+                data: raw.map(d => d.total_revenue),
+                backgroundColor: "rgba(13, 110, 253, 0.7)",
+                borderColor: "rgba(13, 110, 253, 1)",
+                borderWidth: 1,
+              }]
+            },
+            options: {
+              indexAxis: "y",
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { x: { beginAtZero: true } },
+            }
+          });
+        });
+      </script>
+
+      <!-- Overdue + Slow-moving -->
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="card h-100 shadow-sm">
+            <div class="card-header fw-semibold small">Overdue Rentals</div>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light">
+                  <tr><th>Film</th><th>Customer</th><th>Store</th><th>Days Overdue</th></tr>
+                </thead>
+                <tbody>
+                  {% for r in overdue %}
+                  <tr>
+                    <td>{{ r.title }}</td>
+                    <td class="small text-truncate" style="max-width:120px">{{ r.customer_email }}</td>
+                    <td>{{ r.store_id }}</td>
+                    <td class="text-danger fw-semibold">{{ r.days_overdue }}</td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="4" class="text-muted small fst-italic text-center">No overdue rentals.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card h-100 shadow-sm">
+            <div class="card-header fw-semibold small">Slow-Moving Films</div>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light">
+                  <tr><th>Film</th><th>Store</th><th>Copies</th><th>Days Idle</th></tr>
+                </thead>
+                <tbody>
+                  {% for f in slow_films %}
+                  <tr>
+                    <td>{{ f.title }}</td>
+                    <td>{{ f.store_id }}</td>
+                    <td>{{ f.copies_in_stock }}</td>
+                    <td>{{ f.days_since_rented if f.days_since_rented is not none else "Never" }}</td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="4" class="text-muted small fst-italic text-center">No slow-moving films.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /scrollable -->
+  </main>
+</div>
+
+</body>
+</html>

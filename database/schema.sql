@@ -135,3 +135,11 @@ SELECT 1                                                                        
        SUM(CASE WHEN price BETWEEN 1 AND 3 THEN 1 ELSE 0 END)::int               AS price_1_3,
        SUM(CASE WHEN price BETWEEN 3 AND 10 THEN 1 ELSE 0 END)::int              AS price_3_9
 FROM public.film_list;
+
+-- Patch: persistent user preferences for genai-assistant
+CREATE TABLE IF NOT EXISTS public.user_preferences (
+    user_id TEXT PRIMARY KEY,
+    preferred_store_id INT,
+    customer_email TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);

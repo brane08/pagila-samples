@@ -191,43 +191,7 @@ export async function mockHomeApi(page: Page) {
   await mockStoresApi(page);
 }
 
-/** Silently absorb any unmatched backend or chat-agent requests (avoids ECONNREFUSED noise). */
+/** Silently absorb any unmatched backend requests (avoids ECONNREFUSED noise). */
 export async function abortBackendRequests(page: Page) {
   await page.route('http://localhost:8001/**', route => route.abort());
-  await page.route('http://localhost:8000/**', route => route.abort());
-}
-
-// ── Chat agent mocks ───────────────────────────────────────────────────────────
-
-const CHAT_API = 'http://localhost:8000';
-
-export const MOCK_SESSIONS = {
-  sessions: [
-    { thread_id: 'session-1716000000001', step_count: 4, last_active: '2026-05-18T10:00:00.000Z' },
-    { thread_id: 'session-1716000000002', step_count: 2, last_active: '2026-05-17T14:30:00.000Z' },
-  ],
-  total: 2,
-};
-
-/** Builds a minimal SSE response body from an array of event payloads. */
-export function sseBody(events: object[]): string {
-  return events.map(e => `data: ${JSON.stringify(e)}\n\n`).join('');
-}
-
-export async function mockChatStream(page: Page, events: object[]) {
-  await page.route(`${CHAT_API}/chat/stream`, route =>
-    route.fulfill({
-      status: 200,
-      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
-      body: sseBody(events),
-    })
-  );
-}
-
-export async function mockSessionsApi(page: Page) {
-  await page.route(`${CHAT_API}/sessions`, route =>
-    route.fulfill({ json: MOCK_SESSIONS })
-  );
-  // Absorb individual session GETs and DELETEs
-  await page.route(`${CHAT_API}/sessions/**`, route => route.fulfill({ json: { deleted: true } }));
 }

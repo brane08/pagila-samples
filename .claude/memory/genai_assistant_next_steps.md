@@ -148,8 +148,78 @@ Key additions to `agent.py`:
 cd genai-assistant && .venv/bin/python -m pytest tests/test_api.py -v
 ```
 
+## quarkus-ebean Integration Tests (2026-05-28) — COMPLETE ✅
+
+Branch: `ft/phase2`. Commit: `c8a8b13`.
+
+- `FilmsResourceTest` (9 tests) — `\d+` routing fix + full CRUD coverage
+- `StoresResourceTest` (8 tests) — `\d+` routing fix + full coverage
+- `RentalsResourceTest` (2 tests)
+- All 19/19 passing: `mvn test -Dtest="FilmsResourceTest,StoresResourceTest,RentalsResourceTest" -pl quarkus-ebean`
+
+Also fixed: `junit-platform-engine` version override (`6.0.3`) in `quarkus-ebean/pom.xml` and root `pom.xml`.
+
+## Reflection + Grounding nodes (2026-06-03) — COMPLETE ✅
+
+Branch: `ft/phase2`. 3 commits (3ccea18, 1f5380d, eb5e8ee).
+
+Two new post-answer LangGraph nodes added to `genai-assistant/src/agent.py`.
+
+**Spec:** `docs/superpowers/specs/2026-06-03-reflection-grounding-nodes-design.md`
+**Plan:** `docs/superpowers/plans/2026-06-03-reflection-grounding-nodes.md`
+
+### reflect_answer node
+
+Runs on every final agent answer (no tool calls pending). Uses `ReflectionCheck(complete, critique)` via `model.with_structured_output()`. If incomplete and `reflection_retry_count < 1`, injects a `SystemMessage` critique into state and routes back to `agent`. One retry max — never loops twice.
+
+Key additions:
+- `AgentState.reflection_retry_count: int` (in `models.py`)
+- `ReflectionCheck`, `REFLECTION_PROMPT`, `reflection_classifier` (module-level)
+- `reflect_answer(state)` — async node
+- `_after_reflect(state)` — routes to `"agent"` if last message is SystemMessage, else `"ground"`
+- `_prepare_messages` guard changed from `any(isinstance(m, SystemMessage)...)` to `any(... and m.content == SYSTEM_PROMPT)` — prevents critique SystemMessage from blocking SYSTEM_PROMPT injection on retry
+
+### ground_answer node
+
+Always runs after reflect passes through. Uses `GroundingCheck(hallucinated, warning)`. Compares final AIMessage against all ToolMessages in state (truncated to 4000 chars). If hallucinated, replaces the AIMessage with the original content + `\n\n⚠️ Warning: {warning}` via `RemoveMessage` + new `AIMessage`. No re-run — warning is surfaced inline.
+
+Key additions:
+- `GroundingCheck`, `GROUNDING_PROMPT`, `grounding_classifier` (module-level)
+- `ground_answer(state)` — async node; skips entirely if no ToolMessages in state
+- Graph: `ground → END` (always)
+
+### Graph wiring change
+
+```python
+# Before:
+graph.add_conditional_edges("agent", tools_condition, {"tools": "clarify", END: END})
+
+# After:
+graph.add_conditional_edges("agent", tools_condition, {"tools": "clarify", END: "reflect"})
+graph.add_node("reflect", reflect_answer)
+graph.add_conditional_edges("reflect", _after_reflect, {"agent": "agent", "ground": "ground"})
+graph.add_node("ground", ground_answer)
+graph.add_edge("ground", END)
+```
+
+### Test suite state (as of 2026-06-03)
+
+- `test_api.py`: **58/58 passing** (no live DB needed)
+  - `TestReflectionNode`: 5 tests
+  - `TestGroundingNode`: 3 tests
+
+```bash
+cd genai-assistant && .venv/bin/python -m pytest tests/test_api.py -v
+```
+
+Note: `uv run pytest` may fail on Intel Mac (onnxruntime wheel); use `.venv/bin/python -m pytest` instead.
+
+### Also updated this session
+
+- `.claude/memory/genai_assistant_architecture.md` — full node reference, all 24 MCP tools, AgentState fields, key design decisions, endpoint list. Read this instead of agent.py at session start.
+
 ## What's next
 
-- Customer detail card (same actor/store Angular pattern)
-- Films service unit tests
-- Integration/API tests for quarkus-ebean endpoints
+- Customer detail card (Angular, same pattern as actor/store cards)
+- Films service unit tests (Karma/Jasmine)
+- Additional agentic behaviors (planning node, citation node)
