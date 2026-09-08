@@ -22,6 +22,7 @@ dependencies = [
     "pydantic",
     "psycopg[pool,binary]",
     "python-dotenv",
+    "sqlalchemy[asyncio]>=2.0",
     "sse-starlette",
     "fastembed>=0.4",
     "langchain-community>=0.3",

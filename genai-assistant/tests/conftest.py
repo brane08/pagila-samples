@@ -4,6 +4,7 @@ import sys
 import asyncpg
 import pytest_asyncio
 from dotenv import load_dotenv
+from sqlalchemy.ext.asyncio import create_async_engine
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../src"))
 
@@ -22,16 +23,26 @@ _DB = dict(
 
 @pytest_asyncio.fixture(autouse=True)
 async def inject_pool():
-    """Create an asyncpg pool on this test's event loop and inject it into all MCP servers."""
+    """Create a connection pool/engine on this test's event loop and inject into all MCP servers."""
     import analytics_server
     import film_server
     import store_server
+
     pool = await asyncpg.create_pool(**_DB)
     film_server._pool = pool
-    store_server._pool = pool
     analytics_server._pool = pool
+
+    engine = create_async_engine(
+        f"postgresql+asyncpg://{_DB['user']}:{_DB['password']}@{_DB['host']}:{_DB['port']}/{_DB['database']}",
+        pool_size=1,
+        max_overflow=2,
+    )
+    store_server._engine = engine
+
     yield
+
     film_server._pool = None
-    store_server._pool = None
     analytics_server._pool = None
+    store_server._engine = None
     await pool.close()
+    await engine.dispose()
