@@ -1,4 +1,4 @@
-package com.github.brane08.pagila.actor.app;
+package com.github.brane08.pagila.actor.boundary;
 
 import com.github.brane08.pagila.actor.beans.ActorInfo;
 import com.github.brane08.pagila.actor.mapper.ActorMapper;
@@ -18,7 +18,7 @@ import java.util.List;
 @Path("/actors")
 public class ActorsResource {
 
-    @CheckedTemplate
+    @CheckedTemplate(requireTypeSafeExpressions = false)
     public static class Templates {
 
         public static native TemplateInstance list(List<ActorInfo> actors);

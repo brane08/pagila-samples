@@ -16,7 +16,8 @@
 
   <properties>
     <java.version>25</java.version>
-    <vaadin.version>25.1.4</vaadin.version>
+    <vaadin.version>25.2.7</vaadin.version>
+    <ebean.version>19.5.0</ebean.version>
   </properties>
 
   <repositories>
@@ -62,7 +63,7 @@
     <dependency>
       <groupId>io.ebean</groupId>
       <artifactId>ebean-postgres</artifactId>
-      <version>17.5.0</version>
+      <version>${ebean.version}</version>
     </dependency>
 
     <dependency>
