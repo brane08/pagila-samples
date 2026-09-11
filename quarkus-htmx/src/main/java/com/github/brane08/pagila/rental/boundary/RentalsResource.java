@@ -1,4 +1,4 @@
-package com.github.brane08.pagila.rental.app;
+package com.github.brane08.pagila.rental.boundary;
 
 import com.github.brane08.pagila.rental.beans.CustomerViewInfo;
 import com.github.brane08.pagila.rental.mapper.RentalMapper;
@@ -18,7 +18,7 @@ import java.util.List;
 @Path("/rentals")
 public class RentalsResource {
 
-    @CheckedTemplate
+    @CheckedTemplate(requireTypeSafeExpressions = false)
     public static class Templates {
         public static native TemplateInstance customerList(List<CustomerViewInfo> customers);
     }

@@ -1,4 +1,4 @@
-package com.github.brane08.pagila.store.app;
+package com.github.brane08.pagila.store.boundary;
 
 import com.github.brane08.pagila.store.beans.SalesByStoreInfo;
 import com.github.brane08.pagila.store.beans.StaffViewInfo;

@@ -53,7 +53,7 @@ class ActorsResourceTest {
     @Test
     void getActorById_unknownId_returns404() {
         given()
-            .when().get("/actors/99999")
+            .when().get("/actors/0")
             .then()
             .statusCode(404);
     }

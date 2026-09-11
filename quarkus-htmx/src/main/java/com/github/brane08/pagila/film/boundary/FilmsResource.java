@@ -1,4 +1,4 @@
-package com.github.brane08.pagila.film.app;
+package com.github.brane08.pagila.film.boundary;
 
 import com.github.brane08.pagila.film.beans.FilmInfo;
 import com.github.brane08.pagila.film.beans.FilmViewInfo;
