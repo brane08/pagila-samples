@@ -1,4 +1,4 @@
-package com.github.brane08.pagila.home.app;
+package com.github.brane08.pagila.home.boundary;
 
 import io.quarkus.qute.Template;
 import io.quarkus.qute.TemplateInstance;
