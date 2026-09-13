@@ -80,7 +80,7 @@ ln -s "${PROJ}/.claude/memory" "$SYS_MEM"
 | `data-ebean` | Java 25 | Ebean ORM 17.5 | Entities for all 15 tables + 7 views |
 | `data-hibernate` | Java 25 | Hibernate 7.3 | Parallel entity set |
 | `data-exposed` | Kotlin 2.1 | Exposed 1.2 SQL DSL | Kotlin alternative |
-| `data-loader` | Java 25 | Ebean ORM + HikariCP | Standalone CLI to additively expand table data (e.g. `actor`) in `sakila`; no Quarkus/CDI |
+| `data-loader` | Java 25 | Ebean ORM + HikariCP | Standalone CLI to additively expand table data (e.g. `actor`) in `sakila`, plus slow-query showcase demos (N+1, missing index); no Quarkus/CDI |
 | `quarkus-ebean` | Java 25 | Quarkus 3.35 + Ebean | JSON REST API |
 | `quarkus-hibernate` | Java 25 | Quarkus 3.35 + Hibernate | JSON REST API |
 | `quarkus-htmx` | Java 25 | Quarkus + HTMX + Qute | Server-side rendered HTML |
@@ -148,6 +148,9 @@ cd ui-angular && ng serve
 # Build and run the data-loader CLI (additively expands a table's row count)
 mvn -q -pl data-loader -am package -DskipTests
 java -jar data-loader/target/data-loader-1.0.jar --table actor --count 50 --seed 42
+
+# Run slow-query showcase demos (N+1 lazy load, missing-index scan) — same module, different entrypoint
+java -cp "data-loader/target/data-loader-1.0.jar:data-loader/target/lib/*" com.github.brane08.pagila.loader.SlowQueryApp --demo all
 ```
 
 ---
