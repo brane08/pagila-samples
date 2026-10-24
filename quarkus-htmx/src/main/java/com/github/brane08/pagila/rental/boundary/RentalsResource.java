@@ -15,7 +15,7 @@ import jakarta.ws.rs.QueryParam;
 
 import java.util.List;
 
-@Path("/rentals")
+@Path("/ui/rentals")
 public class RentalsResource {
 
     @CheckedTemplate(requireTypeSafeExpressions = false)

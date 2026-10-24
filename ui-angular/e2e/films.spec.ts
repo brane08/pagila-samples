@@ -62,8 +62,8 @@ test.describe('Films page', () => {
 
   test('loading progress bar appears then disappears', async ({ page }) => {
     // Delay the API so we can observe the loading state
-    await page.unroute(`http://localhost:8001/films/@view*`);
-    await page.route('http://localhost:8001/films/@view*', async route => {
+    await page.unroute(`http://localhost:8001/rest/films/@view*`);
+    await page.route('http://localhost:8001/rest/films/@view*', async route => {
       await new Promise(r => setTimeout(r, 200));
       route.fulfill({ json: MOCK_FILMS_PAGE });
     });

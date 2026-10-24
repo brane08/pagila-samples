@@ -1,10 +1,12 @@
 package com.github.brane08.pagila.film.entities;
 
+import com.github.brane08.pagila.actor.entities.Actor;
 import com.github.brane08.pagila.seedworks.entities.BaseModel;
 import com.github.brane08.pagila.seedworks.entities.YearConverter;
 import jakarta.persistence.*;
 import org.hibernate.annotations.Type;
 
+import java.math.BigDecimal;
 import java.time.Year;
 import java.util.List;
 
@@ -39,13 +41,13 @@ public class Film extends BaseModel {
     Integer rentalDuration;
 
     @Column(name = "rental_rate")
-    Double rentalRate;
+    BigDecimal rentalRate;
 
     @Column(name = "length", columnDefinition = "int2")
     Integer length;
 
     @Column(name = "replacement_cost")
-    Double replacementCost;
+    BigDecimal replacementCost;
 
     @Column(name = "rating_txt")
     @Type(com.github.brane08.pagila.seedworks.entities.FilmRatingType.class)
@@ -61,6 +63,13 @@ public class Film extends BaseModel {
             inverseJoinColumns = @JoinColumn(name = "category_id", referencedColumnName = "category_id")
     )
     List<Category> categories;
+
+    @ManyToMany
+    @JoinTable(name = "film_actor",
+            joinColumns = @JoinColumn(name = "film_id", referencedColumnName = "film_id"),
+            inverseJoinColumns = @JoinColumn(name = "actor_id", referencedColumnName = "actor_id")
+    )
+    List<Actor> actors;
 
     public Integer getFilmId() {
         return filmId;
@@ -118,11 +127,11 @@ public class Film extends BaseModel {
         this.rentalDuration = rentalDuration;
     }
 
-    public Double getRentalRate() {
+    public BigDecimal getRentalRate() {
         return rentalRate;
     }
 
-    public void setRentalRate(Double rentalRate) {
+    public void setRentalRate(BigDecimal rentalRate) {
         this.rentalRate = rentalRate;
     }
 
@@ -134,11 +143,11 @@ public class Film extends BaseModel {
         this.length = length;
     }
 
-    public Double getReplacementCost() {
+    public BigDecimal getReplacementCost() {
         return replacementCost;
     }
 
-    public void setReplacementCost(Double replacementCost) {
+    public void setReplacementCost(BigDecimal replacementCost) {
         this.replacementCost = replacementCost;
     }
 
@@ -164,5 +173,13 @@ public class Film extends BaseModel {
 
     public void setCategories(List<Category> categories) {
         this.categories = categories;
+    }
+
+    public List<Actor> getActors() {
+        return actors;
+    }
+
+    public void setActors(List<Actor> actors) {
+        this.actors = actors;
     }
 }

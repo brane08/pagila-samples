@@ -3,6 +3,8 @@ package com.github.brane08.pagila.film.entities;
 import jakarta.persistence.*;
 import org.hibernate.annotations.Type;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "film_list")
 public class FilmView {
@@ -17,11 +19,10 @@ public class FilmView {
     @Column(name = "category")
     private String category;
     @Column(name = "price")
-    private Float price;
+    private BigDecimal price;
     @Column(name = "length")
     private Short length;
-    @Column(name = "rating_txt", columnDefinition = "varchar(10")
-    @Enumerated(EnumType.STRING)
+    @Column(name = "rating_txt")
     @Type(com.github.brane08.pagila.seedworks.entities.FilmRatingType.class)
     private FilmRating rating;
     @Column(name = "actors")
@@ -59,11 +60,11 @@ public class FilmView {
         this.category = category;
     }
 
-    public Float getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(Float price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
 

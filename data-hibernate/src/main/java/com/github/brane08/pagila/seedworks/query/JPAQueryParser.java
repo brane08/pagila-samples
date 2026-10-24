@@ -8,6 +8,7 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public final class JPAQueryParser<T> extends QueryParser<T> {
 
@@ -25,7 +26,8 @@ public final class JPAQueryParser<T> extends QueryParser<T> {
         CriteriaQuery<T> query = cb.createQuery(this.resultClass());
         Root<T> root = query.from(this.resultClass());
         query.select(root);
-        addPredicates(root, query, QueryExpr.OP_AND);
+        applyWhere(query, root);
+        query.orderBy(toOrders(root, order));
         TypedQuery<T> typedQuery = this.em.createQuery(query);
         return typedQuery.setFirstResult(offset).setMaxResults(size).getResultList();
     }
@@ -34,12 +36,12 @@ public final class JPAQueryParser<T> extends QueryParser<T> {
     public int getCount() {
         CriteriaQuery<Long> query = cb.createQuery(Long.class);
         Root<T> root = query.from(this.resultClass());
-        query.select(cb.countDistinct(root));
-        TypedQuery<Long> typedQuery = this.em.createQuery(query);
-        return typedQuery.getResultList().stream().findAny().orElse(0L).intValue();
+        query.select(cb.count(root));
+        applyWhere(query, root);
+        return this.em.createQuery(query).getSingleResult().intValue();
     }
 
-    private void addPredicates(Root<T> root, CriteriaQuery<T> query, String op) {
+    private void applyWhere(CriteriaQuery<?> query, Root<T> root) {
         List<Predicate> predicates = new ArrayList<>();
         try {
             for (QueryExpr expr : exprs()) {
@@ -49,12 +51,21 @@ public final class JPAQueryParser<T> extends QueryParser<T> {
             throw new RuntimeException(ex);
         }
         if (!predicates.isEmpty()) {
-            if (QueryExpr.OP_AND.equalsIgnoreCase(op)) {
-                query.where(cb.and(predicates.toArray(Predicate[]::new)));
-            } else {
-                query.where(cb.or(predicates.toArray(Predicate[]::new)));
-            }
+            query.where(cb.and(predicates.toArray(Predicate[]::new)));
         }
+    }
+
+    /** Comma separated fields; a leading '-' means descending. Empty order leaves ordering to the database. */
+    private List<Order> toOrders(Root<T> root, String order) {
+        Objects.requireNonNull(order, "Sort order should not be null");
+        List<Order> orders = new ArrayList<>();
+        for (String item : order.split(",")) {
+            if (item.isEmpty()) {
+                continue;
+            }
+            orders.add(item.startsWith("-") ? cb.desc(root.get(item.substring(1))) : cb.asc(root.get(item)));
+        }
+        return orders;
     }
 
     <X> Predicate toPredicate(CriteriaBuilder cb, Root<X> root, QueryExpr expr) throws ParseException {
@@ -67,7 +78,7 @@ public final class JPAQueryParser<T> extends QueryParser<T> {
             return cb.lt((Expression<? extends Number>) path, value);
         } else if (QueryExpr.OP_GT.equalsIgnoreCase(expr.operator())) {
             Number value = NumberFormat.getInstance().parse(expr.value());
-            return cb.lt((Expression<? extends Number>) path, value);
+            return cb.gt((Expression<? extends Number>) path, value);
         }
         return null;
     }

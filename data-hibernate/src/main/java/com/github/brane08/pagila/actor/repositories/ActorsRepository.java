@@ -1,11 +1,21 @@
 package com.github.brane08.pagila.actor.repositories;
 
+import com.github.brane08.pagila.actor.beans.ActorViewInfo;
 import com.github.brane08.pagila.actor.entities.Actor;
+import com.github.brane08.pagila.actor.entities.ActorView;
+import com.github.brane08.pagila.actor.mapper.ActorMapper;
+import com.github.brane08.pagila.seedworks.beans.PagedList;
+import com.github.brane08.pagila.seedworks.query.QueryParser;
 import com.github.brane08.pagila.seedworks.repositories.JPARepository;
 import jakarta.persistence.EntityManager;
 
+import java.util.List;
+import java.util.Optional;
+
 
 public class ActorsRepository extends JPARepository<Actor, Integer> {
+
+    private final ActorMapper mapper = ActorMapper.INSTANCE;
 
     public ActorsRepository(EntityManager em) {
         super(em);
@@ -19,5 +29,17 @@ public class ActorsRepository extends JPARepository<Actor, Integer> {
     @Override
     protected String filterProperty() {
         return "firstName";
+    }
+
+    public PagedList<ActorViewInfo> listActorViews(int offset, int size, String order) {
+        QueryParser<ActorView> parser = buildParser("", ActorView.class);
+        List<ActorView> list = parser.getResults(offset, size, order);
+        int count = parser.getCount();
+        return new PagedList<>(mapper.actorViewsToInfo(list), count);
+    }
+
+    public Optional<ActorViewInfo> findActorViewById(int actorId) {
+        ActorView view = em().find(ActorView.class, actorId);
+        return Optional.ofNullable(view).map(mapper::actorViewToInfo);
     }
 }

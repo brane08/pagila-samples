@@ -31,7 +31,7 @@ New Ebean entities (`data-ebean`): `StoreView`, `StoreInventoryView`, `StoreRent
 
 ## JUnit platform version fix (2026-05-20)
 
-`quarkus-ebean/pom.xml` has an explicit `<dependencyManagement>` entry overriding the Quarkus BOM:
+`quarkus-htmx/pom.xml` has an explicit `<dependencyManagement>` entry overriding the Quarkus BOM:
 ```xml
 <dependency>
   <groupId>org.junit.platform</groupId>
@@ -152,4 +152,4 @@ cd genai-assistant && .venv/bin/python -m pytest tests/test_api.py -v
 
 - Customer detail card (same actor/store Angular pattern)
 - Films service unit tests
-- Integration/API tests for quarkus-ebean endpoints
+- Enable deferred quarkus-htmx REST tests

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { mockHomeApi, mockSessionsApi } from './mocks';
 
-const API = 'http://localhost:8001';
+const API = 'http://localhost:8001/rest';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

@@ -16,9 +16,7 @@ Multi-module educational project demonstrating the same DVD rental business doma
 - **data-ebean**: Ebean ORM entities (Java 25)
 - **data-hibernate**: Hibernate JPA entities (Java 25)
 - **data-exposed**: Kotlin Exposed SQL DSL (Kotlin 2.1)
-- **quarkus-ebean**: Quarkus 3 REST API with Ebean (port 8001)
-- **quarkus-hibernate**: Quarkus 3 REST API with Hibernate
-- **quarkus-htmx**: Quarkus + HTMX + Qute server-side rendered UI
+- **quarkus-htmx**: Quarkus 3 consolidated app, port 8001: JSON `/rest/*` + HTMX/Qute `/ui/*`; Hibernate default, Ebean via manual switch
 - **spring-vaadin**: Spring Boot 3.5 + Vaadin 25 UI (skip in ebean-scope reviews)
 - **go-web**: Go REST API (minimal stdlib)
 - **ui-angular**: Angular 20 film browser SPA + embedded AI chat (port 4200)

@@ -93,6 +93,6 @@ public abstract class JPARepository<T, ID> implements Repository<T, ID>, Mapping
         Root<T> root = cbQuery.from(entityClass());
         cbQuery.select(root);
         TypedQuery<T> query = em.createQuery(cbQuery);
-        return query.getResultList();
+        return query.setMaxResults(MAX_PAGE_SIZE).getResultList();
     }
 }

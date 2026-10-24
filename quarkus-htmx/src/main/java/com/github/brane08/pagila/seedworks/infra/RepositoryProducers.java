@@ -1,56 +1,43 @@
 package com.github.brane08.pagila.seedworks.infra;
 
 import com.github.brane08.pagila.actor.repositories.ActorsRepository;
+import com.github.brane08.pagila.film.mapper.FilmMapper;
 import com.github.brane08.pagila.film.repositories.FilmsRepository;
 import com.github.brane08.pagila.rental.repositories.RentalRepository;
 import com.github.brane08.pagila.store.repositories.StoreRepository;
-import io.ebean.Database;
-import io.ebean.DatabaseFactory;
-import io.ebean.annotation.Platform;
-import io.ebean.config.DatabaseConfig;
 import jakarta.enterprise.context.Dependent;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Singleton;
-
-import javax.sql.DataSource;
-import java.util.List;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 @Dependent
 public class RepositoryProducers {
 
+    @PersistenceContext
+    EntityManager em;
+
     @Produces
     @Singleton
-    public Database ebeanDatabase(DataSource dataSource) {
-        DatabaseConfig config = new DatabaseConfig();
-        config.setDataSource(dataSource);
-        config.setDatabasePlatformName(Platform.POSTGRES.name());
-        config.setPackages(List.of("com.github.brane08.pagila.actor.entities",
-                "com.github.brane08.pagila.film.entities", "com.github.brane08.pagila.rental.entities",
-                "com.github.brane08.pagila.seedworks.entities", "com.github.brane08.pagila.store.entities"));
-        return DatabaseFactory.create(config);
+    public FilmsRepository filmsRepository(FilmMapper mapper) {
+        return new FilmsRepository(em, mapper);
     }
 
     @Produces
     @Singleton
-    public FilmsRepository filmsRepository(Database db) {
-        return new FilmsRepository(db);
+    public ActorsRepository actorsRepository() {
+        return new ActorsRepository(em);
     }
 
     @Produces
     @Singleton
-    public ActorsRepository actorsRepository(Database db) {
-        return new ActorsRepository(db);
+    public StoreRepository storeRepository() {
+        return new StoreRepository(em);
     }
 
     @Produces
     @Singleton
-    public StoreRepository storeRepository(Database db) {
-        return new StoreRepository(db);
-    }
-
-    @Produces
-    @Singleton
-    public RentalRepository rentalRepository(Database db) {
-        return new RentalRepository(db);
+    public RentalRepository rentalRepository() {
+        return new RentalRepository(em);
     }
 }

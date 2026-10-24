@@ -1,16 +1,31 @@
 package com.github.brane08.pagila.film.repositories;
 
+import com.github.brane08.pagila.actor.beans.ActorInfo;
+import com.github.brane08.pagila.actor.mapper.ActorMapper;
 import com.github.brane08.pagila.film.beans.FilmViewInfo;
+import com.github.brane08.pagila.film.beans.NicerFilmViewInfo;
+import com.github.brane08.pagila.film.beans.SalesByFilmCategoryInfo;
 import com.github.brane08.pagila.film.entities.Film;
+import com.github.brane08.pagila.film.entities.FilmCategoryFacet;
+import com.github.brane08.pagila.film.entities.FilmPriceFacet;
+import com.github.brane08.pagila.film.entities.FilmRatingFacet;
 import com.github.brane08.pagila.film.entities.FilmView;
+import com.github.brane08.pagila.film.entities.NicerFilmView;
+import com.github.brane08.pagila.film.entities.SalesByFilmCategory;
 import com.github.brane08.pagila.film.mapper.FilmMapper;
+import com.github.brane08.pagila.seedworks.beans.Facet;
 import com.github.brane08.pagila.seedworks.beans.PageInfo;
 import com.github.brane08.pagila.seedworks.beans.PagedList;
-import com.github.brane08.pagila.seedworks.query.JPAQueryParser;
+import com.github.brane08.pagila.seedworks.query.QueryParser;
 import com.github.brane08.pagila.seedworks.repositories.JPARepository;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaQuery;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class FilmsRepository extends JPARepository<Film, Integer> {
 
@@ -37,9 +52,62 @@ public class FilmsRepository extends JPARepository<Film, Integer> {
     }
 
     public PagedList<FilmViewInfo> listFilms(final PageInfo request) {
-        JPAQueryParser<FilmView> parser = new JPAQueryParser<>(em(), "", FilmView.class);
-        List<FilmView> list = parser.getResults(request);
+        return offsetOfFilms(request.offset(), request.size(), request.order());
+    }
+
+    public PagedList<FilmViewInfo> offsetOfFilms(int offset, int size, String order) {
+        QueryParser<FilmView> parser = buildParser("", FilmView.class);
+        List<FilmView> list = parser.getResults(offset, size, order);
         long count = parser.getCount();
         return new PagedList<>(mapper.filmViewsToInfo(list), (int) count);
+    }
+
+    @Override
+    public List<Facet> facets(String queryPart) {
+        final List<Facet> facets = new ArrayList<>();
+
+        List<FilmPriceFacet> prices = findAll(FilmPriceFacet.class);
+        if (!prices.isEmpty()) {
+            FilmPriceFacet pf = prices.getFirst();
+            Facet priceFacet = new Facet("price");
+            priceFacet.addFacetValue("price_0_1", pf.getPrice01());
+            priceFacet.addFacetValue("price_1_3", pf.getPrice13());
+            priceFacet.addFacetValue("price_3_9", pf.getPrice39());
+            facets.add(priceFacet);
+        }
+
+        List<FilmCategoryFacet> categories = findAll(FilmCategoryFacet.class);
+        facets.add(new Facet("category", categories.stream()
+                .map(f -> new Facet.FacetValue(f.getKey(), f.getValue()))
+                .collect(Collectors.toList())));
+
+        List<FilmRatingFacet> ratings = findAll(FilmRatingFacet.class);
+        facets.add(new Facet("rating", ratings.stream()
+                .map(f -> new Facet.FacetValue(f.getKey(), f.getValue()))
+                .collect(Collectors.toList())));
+
+        return facets;
+    }
+
+    public List<ActorInfo> listActors(int filmId) {
+        Optional<Film> film = findById(filmId);
+        return film.map(f -> ActorMapper.INSTANCE.actorsToInfos(f.getActors())).orElse(Collections.emptyList());
+    }
+
+    public PagedList<NicerFilmViewInfo> offsetOfNicerFilms(int offset, int size, String order) {
+        QueryParser<NicerFilmView> parser = buildParser("", NicerFilmView.class);
+        List<NicerFilmView> list = parser.getResults(offset, size, order);
+        long count = parser.getCount();
+        return new PagedList<>(mapper.nicerFilmViewsToInfo(list), (int) count);
+    }
+
+    public List<SalesByFilmCategoryInfo> allSalesByCategory() {
+        return mapper.salesByCategoryToInfos(findAll(SalesByFilmCategory.class));
+    }
+
+    private <E> List<E> findAll(Class<E> type) {
+        CriteriaQuery<E> query = em().getCriteriaBuilder().createQuery(type);
+        query.select(query.from(type));
+        return em().createQuery(query).getResultList();
     }
 }
