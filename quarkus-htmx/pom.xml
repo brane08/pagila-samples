@@ -33,14 +33,45 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <!-- Quarkus BOM pins junit-platform-engine to 1.10.1; JUnit 6 launcher needs a matching 6.x engine -->
+      <dependency>
+        <groupId>org.junit.platform</groupId>
+        <artifactId>junit-platform-engine</artifactId>
+        <version>${junit5.version}</version>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
   <dependencies>
+    <!--
+      ORM switch (manual). Default: Hibernate. To use Ebean instead:
+        1. replace data-hibernate with data-ebean
+        2. replace quarkus-hibernate-orm + quarkus-hibernate-validator with ebean-postgres
+        3. replace seedworks/infra/RepositoryProducers.java with orm-ebean/RepositoryProducers.java.txt
+        4. swap the SQL log category in application.yml to io.ebean.SQL
+      data-hibernate and data-ebean share FQCNs, so only one may be on the classpath.
+    -->
     <dependency>
       <groupId>com.github.brane08.pagila</groupId>
-      <artifactId>data-ebean</artifactId>
+      <artifactId>data-hibernate</artifactId>
       <version>1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-rest-jackson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-config-yaml</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-orm</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-validator</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -67,10 +98,6 @@
       <artifactId>quarkus-web-dependency-locator</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.ebean</groupId>
-      <artifactId>ebean-postgres</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.mapstruct</groupId>
       <artifactId>mapstruct</artifactId>
     </dependency>
@@ -93,6 +120,11 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

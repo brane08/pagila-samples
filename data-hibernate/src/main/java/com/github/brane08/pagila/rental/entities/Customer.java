@@ -1,19 +1,26 @@
 package com.github.brane08.pagila.rental.entities;
 
+import com.github.brane08.pagila.seedworks.entities.Address;
+import com.github.brane08.pagila.seedworks.entities.BaseModel;
+import com.github.brane08.pagila.store.entities.Store;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "customer")
-public class Customer {
+public class Customer extends BaseModel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "customer_id")
     Integer customerId;
 
-    @Column(name = "store_id", columnDefinition = "int2")
+    @Column(name = "store_id", columnDefinition = "int2", insertable = false, updatable = false)
     Integer storeId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id")
+    Store store;
 
     @Column(name = "first_name")
     String firstName;
@@ -24,8 +31,12 @@ public class Customer {
     @Column(name = "email")
     String email;
 
-    @Column(name = "address_id", columnDefinition = "int2")
+    @Column(name = "address_id", columnDefinition = "int2", insertable = false, updatable = false)
     Integer addressId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "address_id")
+    Address address;
 
     @Column(name = "activebool")
     boolean status;
@@ -50,6 +61,14 @@ public class Customer {
 
     public void setStoreId(Integer storeId) {
         this.storeId = storeId;
+    }
+
+    public Store getStore() {
+        return store;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
     }
 
     public String getFirstName() {
@@ -82,6 +101,14 @@ public class Customer {
 
     public void setAddressId(Integer addressId) {
         this.addressId = addressId;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
     }
 
     public boolean isStatus() {

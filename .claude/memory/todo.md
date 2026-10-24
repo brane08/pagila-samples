@@ -1,15 +1,14 @@
-# Task Status — quarkus-ebean Films/Stores/Rentals Integration Tests
+# Task Status — quarkus-htmx
 
 ## Setup
-- DONE: Spec + plan written and committed
+- PENDING: Verify quarkus-htmx on JDK 25 + live DB (package/augmentation passes on JDK 21 override; no runtime run)
 
 ## Implementation
-- DONE: Task 1 — FilmsResource \d+ routing fix + FilmsResourceTest (9 tests)
-- DONE: Task 2 — StoresResource \d+ routing fix + StoresResourceTest (8 tests)
-- DONE: Task 3 — RentalsResourceTest (2 tests) + run all 19 + commit
+- DONE: /ui/films HTML page + nav link; deferred REST endpoints added (films count/facets/@nicer-view/@sales-by-category, actors/@view, stores @view/@staff/@sales-by-store, rentals + rentals/@customers)
 
 ## Tests
-- DONE: 19/19 passing via `mvn test -Dtest="FilmsResourceTest,StoresResourceTest,RentalsResourceTest"`
+- PENDING: Run REST contract tests against live DB
+- DONE: All REST tests enabled (none @Disabled); still unrun
 
 ## Review
-- DONE: Spec compliance + code quality per task (all approved)
+- PENDING: Review quarkus-htmx changes on JDK 25

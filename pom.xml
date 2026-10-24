@@ -49,12 +49,10 @@
     <module>core-api</module>
     <module>data-ebean</module>
     <module>data-loader</module>
-    <module>quarkus-ebean</module>
     <module>quarkus-htmx</module>
     <module>spring-vaadin</module>
     <module>data-exposed</module>
     <module>data-hibernate</module>
-    <module>quarkus-hibernate</module>
   </modules>
 
   <dependencyManagement>

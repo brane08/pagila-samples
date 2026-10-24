@@ -15,7 +15,7 @@ import jakarta.ws.rs.QueryParam;
 
 import java.util.List;
 
-@Path("/actors")
+@Path("/ui/actors")
 public class ActorsResource {
 
     @CheckedTemplate(requireTypeSafeExpressions = false)
