@@ -19,6 +19,14 @@ Use Superpowers in this order:
 3. /superpowers:execute-plan
 4. /superpowers:finish
 
+## Model Policy
+
+- Allowed models: `sonnet`, `haiku` only. Never use opus or any other model.
+- `sonnet`: main session and any task needing reasoning (design, planning, debugging, review, non-trivial code).
+- `haiku`: subagents for non-thinking tasks (file search, grep/glob sweeps, running tests/builds, log summarizing, boilerplate, `todo.md`/memory updates, formatting).
+- When spawning a subagent, set `model` explicitly to one of the two above.
+- Haiku subagents: cap context at 100k tokens. Scope each task to fit, instruct the agent to compact at ~100k, and require compact YAML output (no file dumps).
+
 ## Task Tracking
 
 After spec approval:
@@ -81,9 +89,7 @@ ln -s "${PROJ}/.claude/memory" "$SYS_MEM"
 | `data-hibernate` | Java 25 | Hibernate 7.3 | Parallel entity set |
 | `data-exposed` | Kotlin 2.1 | Exposed 1.2 SQL DSL | Kotlin alternative |
 | `data-loader` | Java 25 | Ebean ORM + HikariCP | Standalone CLI to additively expand table data (e.g. `actor`) in `sakila`, plus slow-query showcase demos (N+1, missing index); no Quarkus/CDI |
-| `quarkus-ebean` | Java 25 | Quarkus 3.35 + Ebean | JSON REST API |
-| `quarkus-hibernate` | Java 25 | Quarkus 3.35 + Hibernate | JSON REST API |
-| `quarkus-htmx` | Java 25 | Quarkus + HTMX + Qute | Server-side rendered HTML |
+| `quarkus-htmx` | Java 25 | Quarkus + Hibernate (default) + HTMX + Qute | JSON REST at `/rest/*`, server-rendered HTML at `/ui/*`, port 8001. ORM switchable to Ebean manually (see pom comment, `orm-ebean/`) |
 | `spring-vaadin` | Java 25 | Spring Boot 3.5 + Vaadin 25 | Skip in ebean-scope reviews |
 | `go-web` | Go | stdlib net/http | Minimal REST API |
 | `ui-angular` | TypeScript | Angular 20 | Film browser SPA + embedded AI chat |
@@ -128,12 +134,9 @@ The `rating_txt` column exists specifically because Ebean cannot natively handle
 
 ```bash
 # Compile all Java modules
-mvn compile -pl core-api,data-ebean,quarkus-ebean,quarkus-htmx -q
+mvn compile -pl core-api,data-hibernate,quarkus-htmx -q
 
-# Run quarkus-ebean in dev mode
-cd quarkus-ebean && mvn quarkus:dev
-
-# Run quarkus-htmx in dev mode
+# Run quarkus-htmx in dev mode (JSON /rest, HTML /ui)
 cd quarkus-htmx && mvn quarkus:dev
 
 # Run genai-assistant (uv sync may fail on Intel Mac due to torch; venv is pre-built)
@@ -300,4 +303,4 @@ All originally planned features are complete:
 5. **Store detail card** ✅ — Angular card component using existing `GET /stores/{id}` backend
 6. **Angular unit tests** ✅ — Karma/Jasmine specs for actors/stores services and card components
 
-**Next options:** Customer detail card, films service unit tests, quarkus-ebean integration tests.
+**Next options:** Customer detail card, films service unit tests, enable deferred quarkus-htmx REST tests.

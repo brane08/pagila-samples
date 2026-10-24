@@ -62,12 +62,12 @@ public class FilmRatingType implements UserType<FilmRating> {
 
     @Override
     public Serializable disassemble(FilmRating value) {
-        return deepCopy(value);
+        return value == null ? null : value.rating();
     }
 
     @Override
     public FilmRating assemble(Serializable cached, Object owner) {
-        return deepCopy(FilmRating.fromValue((String) cached));
+        return cached == null ? null : FilmRating.fromValue((String) cached);
     }
 
     @Override

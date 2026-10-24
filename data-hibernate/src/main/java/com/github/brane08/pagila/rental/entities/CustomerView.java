@@ -17,7 +17,7 @@ public class CustomerView {
     String name;
     @Column(name = "address")
     String address;
-    @Column(name = "zip_code")
+    @Column(name = "\"zip code\"")
     String zipCode;
     @Column(name = "phone")
     String phone;

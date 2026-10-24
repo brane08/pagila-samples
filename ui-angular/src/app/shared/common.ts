@@ -1,5 +1,5 @@
 export class Constants {
-  public static API_BASE = "http://localhost:8001";
+  public static API_BASE = "http://localhost:8001/rest";
 }
 
 export function defaultPages() {
