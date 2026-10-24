@@ -18,7 +18,7 @@ import jakarta.ws.rs.PathParam;
 
 import java.util.List;
 
-@Path("/stores")
+@Path("/ui/stores")
 public class StoresResource {
 
     @CheckedTemplate

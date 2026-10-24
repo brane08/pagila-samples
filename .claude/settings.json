@@ -1,5 +1,11 @@
 {
   "autoMemoryEnabled": false,
+  "model": "sonnet",
+  "availableModels": ["sonnet", "haiku"],
+  "env": {
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "350000",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "85"
+  },
   "llm": {
     "model": "sonnet-4.6",
     "temperature": 0.1,

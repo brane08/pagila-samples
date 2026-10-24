@@ -1,11 +1,11 @@
 /**
- * Shared API mock helpers. All Quarkus/backend calls go to http://localhost:8001.
+ * Shared API mock helpers. All Quarkus/backend calls go to http://localhost:8001/rest.
  * The chat agent calls go to http://localhost:8000.
  * Tests use page.route() interception so no real backend is required.
  */
 import { Page } from '@playwright/test';
 
-const API = 'http://localhost:8001';
+const API = 'http://localhost:8001/rest';
 
 // ── Film mocks ─────────────────────────────────────────────────────────────────
 

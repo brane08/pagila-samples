@@ -1,30 +1,38 @@
 package com.github.brane08.pagila.rental.entities;
 
-import com.github.brane08.pagila.seedworks.entities.BaseModel;
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
 @Table(name = "payment")
-public class Payment extends BaseModel {
+public class Payment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "payment_id")
     Integer paymentId;
 
-    @Column(name = "customer_id")
+    @Column(name = "customer_id", insertable = false, updatable = false)
     Integer customerId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    Customer customer;
 
     @Column(name = "staff_id")
     Integer staffId;
 
-    @Column(name = "rental_id")
+    @Column(name = "rental_id", insertable = false, updatable = false)
     Integer rentalId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rental_id")
+    Rental rental;
+
     @Column(name = "amount")
-    Float amount;
+    BigDecimal amount;
 
     @Column(name = "payment_date")
     Instant paymentDate;
@@ -45,6 +53,14 @@ public class Payment extends BaseModel {
         this.customerId = customerId;
     }
 
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
+    }
+
     public Integer getStaffId() {
         return staffId;
     }
@@ -61,11 +77,19 @@ public class Payment extends BaseModel {
         this.rentalId = rentalId;
     }
 
-    public Float getAmount() {
+    public Rental getRental() {
+        return rental;
+    }
+
+    public void setRental(Rental rental) {
+        this.rental = rental;
+    }
+
+    public BigDecimal getAmount() {
         return amount;
     }
 
-    public void setAmount(Float amount) {
+    public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
 
