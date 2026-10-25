@@ -5,6 +5,7 @@ import com.github.brane08.pagila.seedworks.query.EbeanQueryParser;
 import com.github.brane08.pagila.seedworks.query.QueryParser;
 import com.github.brane08.pagila.seedworks.query.QueryParserFactory;
 import io.ebean.Database;
+import io.ebean.Query;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,7 +46,13 @@ public abstract class EbeanRepository<T, ID> implements Repository<T, ID>, Mappi
 
     @Override
     public Optional<T> findById(ID id) {
-        return Optional.ofNullable(db.find(entityClass(), id));
+        List<String> fetchPaths = getLoadFields();
+        if (fetchPaths.isEmpty()) {
+            return Optional.ofNullable(db.find(entityClass(), id));
+        }
+        Query<T> query = db.find(entityClass());
+        fetchPaths.forEach(query::fetch);
+        return Optional.ofNullable(query.where().idEq(id).findOne());
     }
 
     @Override

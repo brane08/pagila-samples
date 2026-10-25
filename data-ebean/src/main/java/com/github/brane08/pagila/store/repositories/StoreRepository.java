@@ -32,7 +32,7 @@ public class StoreRepository extends EbeanRepository<Store, Integer> {
 
     @Override
     protected List<String> getLoadFields() {
-        return List.of("currentStaff");
+        return List.of("manager");
     }
 
     @Override

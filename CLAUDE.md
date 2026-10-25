@@ -85,9 +85,9 @@ ln -s "${PROJ}/.claude/memory" "$SYS_MEM"
 |---|---|---|---|
 | `core-api` | Java 25 | MapStruct DTOs | Shared beans/mappers used by all Java modules |
 | `database` | SQL | PostgreSQL | Schema patches on top of base Pagila (see below) |
-| `data-ebean` | Java 25 | Ebean ORM 17.5 | Entities for all 15 tables + 7 views |
-| `data-hibernate` | Java 25 | Hibernate 7.3 | Parallel entity set |
-| `data-exposed` | Kotlin 2.1 | Exposed 1.2 SQL DSL | Kotlin alternative |
+| `data-ebean` | Java 25 | Ebean ORM 19.5 | Entities for all 15 tables + 7 views |
+| `data-hibernate` | Java 25 | Hibernate 7.4 | Parallel entity set |
+| `data-exposed` | Kotlin 2.4 | Exposed 1.5 SQL DSL | Kotlin alternative |
 | `data-loader` | Java 25 | Ebean ORM + HikariCP | Standalone CLI to additively expand table data (e.g. `actor`) in `sakila`, plus slow-query showcase demos (N+1, missing index); no Quarkus/CDI |
 | `quarkus-htmx` | Java 25 | Quarkus + Hibernate (default) + HTMX + Qute | JSON REST at `/rest/*`, server-rendered HTML at `/ui/*`, port 8001. ORM switchable to Ebean manually (see pom comment, `orm-ebean/`) |
 | `spring-vaadin` | Java 25 | Spring Boot 3.5 + Vaadin 25 | Skip in ebean-scope reviews |
@@ -100,10 +100,10 @@ ln -s "${PROJ}/.claude/memory" "$SYS_MEM"
 ## Key Versions
 
 - Java: 25
-- Quarkus: 3.35.2
-- Ebean: 17.5.0
-- Hibernate: 7.3.3.Final
-- Kotlin Exposed: 1.2.0
+- Quarkus: 3.39.3
+- Ebean: 19.5.0
+- Hibernate: 7.4.7.Final
+- Kotlin Exposed: 1.5.0
 - Angular: 20 (with signals, OnPush, `rxResource`)
 - Python: 3.13 (pyproject.toml `requires-python = ">=3.11,<3.14"`)
 
