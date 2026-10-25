@@ -85,7 +85,7 @@ class FilmMapperTest {
         assertEquals(0.99, info.getRentalRate(), 0.0001);
         assertEquals(Integer.valueOf(86), info.getLength());
         assertEquals(20.99, info.getReplacementCost(), 0.0001);
-        assertEquals("PG13", info.getRating());
+        assertEquals("PG-13", info.getRating());
         assertEquals(Instant.parse("2006-02-15T05:03:42Z"), info.getLastUpdate());
     }
 
@@ -184,7 +184,7 @@ class FilmMapperTest {
         assertEquals("ACE GOLDFINGER", info.getTitle());
         assertEquals("Horror", info.getCategory());
         assertEquals(4.99f, info.getPrice().floatValue(), 0.001f);
-        assertEquals("NC17", info.getRating());
+        assertEquals("NC-17", info.getRating());
         assertNull(mapper.nicerFilmViewToInfo(null));
         assertTrue(mapper.nicerFilmViewsToInfo(null).isEmpty());
         assertEquals(1, mapper.nicerFilmViewsToInfo(List.of(view)).size());

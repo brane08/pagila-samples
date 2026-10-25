@@ -71,8 +71,6 @@ public final class EbeanQueryParser<T> extends QueryParser<T> {
                     oBy.asc(item);
                 }
             }
-        } else {
-            query.orderBy().asc("id");
         }
     }
 

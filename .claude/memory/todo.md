@@ -13,5 +13,7 @@
 
 ## Review
 - DONE: data-ebean audit — file set, relations, BaseModel use, repo methods match data-hibernate; no tests/gate yet
-- PENDING: data-ebean unit tests + 70% gate (needs Database mocks; Ebean not on test classpath with Hibernate)
+- DONE: data-ebean unit tests (185 incl. core-api) + JaCoCo gate (100% line); fixed default sort + RentalRepository.filterProperty
+- DONE: FilmRating mapped as DB value (PG-13); Ebean findById applies load fields; Store load field manager; CLAUDE.md versions synced
+- PENDING: Remaining flagged behaviours (PagedList.totalPageCount, parser silent drops, Actor/Address equals null id, StaffInfo ids unmapped)
 - PENDING: Review quarkus-htmx changes on JDK 25

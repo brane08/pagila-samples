@@ -28,7 +28,7 @@ public class RentalRepository extends EbeanRepository<Rental, Integer> {
 
     @Override
     protected String filterProperty() {
-        return null;
+        return "rentalId";
     }
 
     public PagedList<CustomerViewInfo> listCustomerViews(int offset, int size, String order) {
