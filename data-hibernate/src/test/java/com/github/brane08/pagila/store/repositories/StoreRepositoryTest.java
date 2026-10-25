@@ -257,7 +257,7 @@ class StoreRepositoryTest {
 
     @Test
     void exposesLoadFieldsEntityClassAndFilterProperty() {
-        assertEquals(List.of("currentStaff"), repository.getLoadFields());
+        assertEquals(List.of("manager"), repository.getLoadFields());
         assertEquals(Store.class, repository.entityClass());
         assertEquals("storeId", repository.filterProperty());
     }

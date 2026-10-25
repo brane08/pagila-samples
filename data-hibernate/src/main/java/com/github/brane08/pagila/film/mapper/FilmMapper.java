@@ -7,6 +7,7 @@ import com.github.brane08.pagila.film.beans.NicerFilmViewInfo;
 import com.github.brane08.pagila.film.beans.SalesByFilmCategoryInfo;
 import com.github.brane08.pagila.film.entities.Category;
 import com.github.brane08.pagila.film.entities.Film;
+import com.github.brane08.pagila.film.entities.FilmRating;
 import com.github.brane08.pagila.film.entities.FilmView;
 import com.github.brane08.pagila.film.entities.Language;
 import com.github.brane08.pagila.film.entities.NicerFilmView;
@@ -40,6 +41,10 @@ public interface FilmMapper {
     List<SalesByFilmCategoryInfo> salesByCategoryToInfos(List<SalesByFilmCategory> entities);
 
     CategoryInfo categoryToInfo(Category category);
+
+    default String ratingToString(FilmRating rating) {
+        return rating != null ? rating.rating() : null;
+    }
 
     default int yearToInt(Year value) {
         return value.getValue();
