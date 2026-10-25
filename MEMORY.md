@@ -38,9 +38,6 @@ Customer customer;
 The `payment` table has no `last_update` column. `Payment.java` must not extend
 `BaseModel` or Ebean will generate a broken SELECT at runtime.
 
-### spring-vaadin is excluded from ebean-scope reviews
-When reviewing ebean-based modules, skip `spring-vaadin`.
-
 ---
 
 ## genai-assistant: Completed Work

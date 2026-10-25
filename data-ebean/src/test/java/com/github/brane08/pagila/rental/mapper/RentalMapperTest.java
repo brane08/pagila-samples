@@ -79,7 +79,7 @@ class RentalMapperTest {
         List<RentalInfo> infos = mapper.rentalsToInfos(List.of(rental(1), rental(2)));
 
         assertEquals(2, infos.size());
-        assertEquals(Integer.valueOf(1), infos.get(0).getRentalId());
+        assertEquals(Integer.valueOf(1), infos.getFirst().getRentalId());
         assertEquals(Integer.valueOf(2), infos.get(1).getRentalId());
     }
 
@@ -128,7 +128,7 @@ class RentalMapperTest {
                 List.of(customerView(5, "MARY SMITH"), customerView(6, "PATRICIA JOHNSON")));
 
         assertEquals(2, infos.size());
-        assertEquals("MARY SMITH", infos.get(0).getName());
+        assertEquals("MARY SMITH", infos.getFirst().getName());
         assertEquals("PATRICIA JOHNSON", infos.get(1).getName());
     }
 

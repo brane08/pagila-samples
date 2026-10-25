@@ -65,7 +65,7 @@ class ActorMapperTest {
                 List.of(actor(1, "PENELOPE", "GUINESS"), actor(2, "NICK", "WAHLBERG")));
 
         assertEquals(2, infos.size());
-        assertEquals("PENELOPE", infos.get(0).firstName());
+        assertEquals("PENELOPE", infos.getFirst().firstName());
         assertEquals(2, infos.get(1).actorId());
     }
 
@@ -96,7 +96,7 @@ class ActorMapperTest {
                 actorView(2, "NICK", "WAHLBERG", null)));
 
         assertEquals(2, infos.size());
-        assertEquals(1L, infos.get(0).getActorId());
+        assertEquals(1L, infos.getFirst().getActorId());
         assertEquals("NICK", infos.get(1).getFirstName());
         assertNull(infos.get(1).getFilmInfo());
     }

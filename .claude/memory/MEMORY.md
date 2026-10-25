@@ -2,7 +2,7 @@
 - [`todo.md`](./todo.md)
 - [`decisions.md`](./decisions.md)
 - [`review.md`](./review.md)
-- [Project Overview](project_overview.md) — Multi-module Java/Kotlin/Go/Python demo over Pagila DVD rental DB; 13 modules spanning many frameworks
+- [Project Overview](project_overview.md) — Multi-module Java/Go/Python/Angular demo over Pagila DVD rental DB
 - [GenAI Assistant Architecture](genai_assistant_architecture.md) — Python FastAPI + LangGraph + MCP + pgvector RAG; Angular chat UI fully implemented in ui-angular as MatDialog
 - [GenAI Assistant Next Steps](genai_assistant_next_steps.md) — Analytics MCP server complete (all 7 tasks, 50 tests passing as of 2026-05-25); next: customer detail card, films service unit tests, enable deferred quarkus-htmx REST tests
 - [DB Config](project_db_config.md) — DB: **sakila**, app schema: public, LangGraph schema: langgraph, embeddings: FastEmbed BAAI/bge-small-en-v1.5
