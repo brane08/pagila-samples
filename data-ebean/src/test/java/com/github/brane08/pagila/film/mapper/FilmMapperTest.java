@@ -138,7 +138,7 @@ class FilmMapperTest {
         List<FilmInfo> infos = mapper.filmsToInfos(List.of(film()));
 
         assertEquals(1, infos.size());
-        assertEquals("ACADEMY DINOSAUR", infos.get(0).getTitle());
+        assertEquals("ACADEMY DINOSAUR", infos.getFirst().getTitle());
         assertTrue(mapper.filmsToInfos(null).isEmpty());
     }
 
@@ -172,7 +172,7 @@ class FilmMapperTest {
         List<FilmViewInfo> infos = mapper.filmViewsToInfo(List.of(filmView("Drama", BigDecimal.ONE, FilmRating.R)));
 
         assertEquals(1, infos.size());
-        assertEquals("Drama", infos.get(0).getCategory());
+        assertEquals("Drama", infos.getFirst().getCategory());
         assertTrue(mapper.filmViewsToInfo(null).isEmpty());
     }
 

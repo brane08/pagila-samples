@@ -87,10 +87,8 @@ ln -s "${PROJ}/.claude/memory" "$SYS_MEM"
 | `database` | SQL | PostgreSQL | Schema patches on top of base Pagila (see below) |
 | `data-ebean` | Java 25 | Ebean ORM 19.5 | Entities for all 15 tables + 7 views |
 | `data-hibernate` | Java 25 | Hibernate 7.4 | Parallel entity set |
-| `data-exposed` | Kotlin 2.4 | Exposed 1.5 SQL DSL | Kotlin alternative |
 | `data-loader` | Java 25 | Ebean ORM + HikariCP | Standalone CLI to additively expand table data (e.g. `actor`) in `sakila`, plus slow-query showcase demos (N+1, missing index); no Quarkus/CDI |
 | `quarkus-htmx` | Java 25 | Quarkus + Hibernate (default) + HTMX + Qute | JSON REST at `/rest/*`, server-rendered HTML at `/ui/*`, port 8001. ORM switchable to Ebean manually (see pom comment, `orm-ebean/`) |
-| `spring-vaadin` | Java 25 | Spring Boot 3.5 + Vaadin 25 | Skip in ebean-scope reviews |
 | `go-web` | Go | stdlib net/http | Minimal REST API |
 | `ui-angular` | TypeScript | Angular 20 | Film browser SPA + embedded AI chat |
 | `genai-assistant` | Python 3.13 | FastAPI + LangGraph + MCP | AI agent backend |
@@ -103,7 +101,6 @@ ln -s "${PROJ}/.claude/memory" "$SYS_MEM"
 - Quarkus: 3.39.3
 - Ebean: 19.5.0
 - Hibernate: 7.4.7.Final
-- Kotlin Exposed: 1.5.0
 - Angular: 20 (with signals, OnPush, `rxResource`)
 - Python: 3.13 (pyproject.toml `requires-python = ">=3.11,<3.14"`)
 
@@ -151,6 +148,10 @@ cd ui-angular && ng serve
 # Build and run the data-loader CLI (additively expands a table's row count)
 mvn -q -pl data-loader -am package -DskipTests
 java -jar data-loader/target/data-loader-1.0.jar --table actor --count 50 --seed 42
+
+# Java version migration (OpenRewrite; target = rewrite.recipe in root pom, currently UpgradeToJava21)
+mvn rewrite:dryRun        # preview: target/rewrite/rewrite.patch per module
+mvn rewrite:run           # apply, then review the diff and run mvn verify
 
 # Run slow-query showcase demos (N+1 lazy load, missing-index scan) — same module, different entrypoint
 java -cp "data-loader/target/data-loader-1.0.jar:data-loader/target/lib/*" com.github.brane08.pagila.loader.SlowQueryApp --demo all
@@ -200,7 +201,6 @@ Collection name: `film_descriptions`. Seed with `cd genai-assistant && .venv/bin
   @JoinColumn(name = "customer_id")
   Customer customer;                           // ORM navigation
   ```
-- `spring-vaadin` is excluded from ebean-scope reviews.
 - Join tables (`film_actor`, `film_category`) are handled via `@ManyToMany` in `Film.java`,
   not as separate entity classes.
 

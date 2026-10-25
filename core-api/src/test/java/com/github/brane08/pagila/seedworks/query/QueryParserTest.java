@@ -56,7 +56,7 @@ class QueryParserTest {
         List<QueryExpr> exprs = new StubParser("rating==G;length=lt=90;title=like=A%").exprs();
 
         assertEquals(3, exprs.size());
-        assertEquals(new QueryExpr("rating", "", "G"), exprs.get(0));
+        assertEquals(new QueryExpr("rating", "", "G"), exprs.getFirst());
         assertEquals(new QueryExpr("length", "lt", "90"), exprs.get(1));
         assertEquals(new QueryExpr("title", "like", "A%"), exprs.get(2));
     }
@@ -65,14 +65,14 @@ class QueryParserTest {
     void gtAndInOperatorsAreParsed() {
         List<QueryExpr> exprs = new StubParser("rental_rate=gt=2.99;film_id=in=1,2,3").exprs();
 
-        assertEquals("gt", exprs.get(0).operator());
+        assertEquals("gt", exprs.getFirst().operator());
         assertEquals("in", exprs.get(1).operator());
         assertEquals("1,2,3", exprs.get(1).value());
     }
 
     @Test
     void negationOperatorIsParsed() {
-        assertEquals(new QueryExpr("rating", "!", "R"), new StubParser("rating=!=R").exprs().get(0));
+        assertEquals(new QueryExpr("rating", "!", "R"), new StubParser("rating=!=R").exprs().getFirst());
     }
 
     @Test
@@ -88,7 +88,7 @@ class QueryParserTest {
     @Test
     void segmentsBeyondThirdEqualsPartAreSilentlyIgnored() {
         // Current behaviour: "a==b=c" splits into [a, "", b, c]; only the third part becomes the value.
-        assertEquals(new QueryExpr("a", "", "b"), new StubParser("a==b=c").exprs().get(0));
+        assertEquals(new QueryExpr("a", "", "b"), new StubParser("a==b=c").exprs().getFirst());
     }
 
     @Test

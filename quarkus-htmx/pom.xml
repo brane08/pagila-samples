@@ -50,6 +50,7 @@
         2. replace quarkus-hibernate-orm + quarkus-hibernate-validator with ebean-postgres
         3. replace seedworks/infra/RepositoryProducers.java with orm-ebean/RepositoryProducers.java.txt
         4. swap the SQL log category in application.yml to io.ebean.SQL
+        5. delete src/test/.../seedworks/infra/RepositoryProducersUnitTest.java (Hibernate-specific)
       data-hibernate and data-ebean share FQCNs, so only one may be on the classpath.
     -->
     <dependency>

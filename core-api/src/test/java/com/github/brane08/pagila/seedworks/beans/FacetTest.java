@@ -25,8 +25,8 @@ class FacetTest {
         facet.addFacetValue("PG", 2);
 
         assertEquals(2, facet.getValues().size());
-        assertEquals("G", facet.getValues().get(0).getKey());
-        assertEquals(4, facet.getValues().get(0).getValue());
+        assertEquals("G", facet.getValues().getFirst().getKey());
+        assertEquals(4, facet.getValues().getFirst().getValue());
         assertEquals("PG", facet.getValues().get(1).getKey());
         assertEquals(2, facet.getValues().get(1).getValue());
     }
