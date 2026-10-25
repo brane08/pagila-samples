@@ -188,7 +188,7 @@ class FilmsRepositoryTest {
         List<Facet> facets = repository.facets("");
 
         assertEquals(List.of("price", "category", "rating"), properties(facets));
-        Facet priceFacet = facets.get(0);
+        Facet priceFacet = facets.getFirst();
         assertEquals(List.of("price_0_1", "price_1_3", "price_3_9"), keys(priceFacet));
         assertEquals(List.of(10, 20, 30), counts(priceFacet));
         assertEquals(List.of("Action", "Drama"), keys(facets.get(1)));
@@ -205,7 +205,7 @@ class FilmsRepositoryTest {
         List<Facet> facets = repository.facets("");
 
         assertEquals(List.of("category", "rating"), properties(facets));
-        assertEquals(List.of("Comedy"), keys(facets.get(0)));
+        assertEquals(List.of("Comedy"), keys(facets.getFirst()));
         assertEquals(List.of("R"), keys(facets.get(1)));
     }
 
@@ -214,7 +214,7 @@ class FilmsRepositoryTest {
         List<Facet> facets = repository.facets("");
 
         assertEquals(List.of("category", "rating"), properties(facets));
-        assertTrue(facets.get(0).getValues().isEmpty());
+        assertTrue(facets.getFirst().getValues().isEmpty());
         assertTrue(facets.get(1).getValues().isEmpty());
     }
 

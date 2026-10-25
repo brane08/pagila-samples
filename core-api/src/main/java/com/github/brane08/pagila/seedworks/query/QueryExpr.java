@@ -23,7 +23,7 @@ public record QueryExpr(String field, String operator, String value) {
     }
 
     public QueryExpr(List<String> args) {
-        this(args.get(0), args.get(1), args.get(2));
+        this(args.getFirst(), args.get(1), args.get(2));
     }
 
     private boolean isArray() {

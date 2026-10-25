@@ -15,19 +15,16 @@ Multi-module educational project demonstrating the same DVD rental business doma
 - **database**: PostgreSQL schema patches (`./database/schema.sql`)
 - **data-ebean**: Ebean ORM entities (Java 25)
 - **data-hibernate**: Hibernate JPA entities (Java 25)
-- **data-exposed**: Kotlin Exposed SQL DSL (Kotlin 2.1)
 - **quarkus-htmx**: Quarkus 3 consolidated app, port 8001: JSON `/rest/*` + HTMX/Qute `/ui/*`; Hibernate default, Ebean via manual switch
-- **spring-vaadin**: Spring Boot 3.5 + Vaadin 25 UI (skip in ebean-scope reviews)
 - **go-web**: Go REST API (minimal stdlib)
 - **ui-angular**: Angular 20 film browser SPA + embedded AI chat (port 4200)
 - **genai-assistant**: Python FastAPI + LangGraph + MCP agent (port 8000)
 
 ## Key Versions
 - Java: 25
-- Quarkus: 3.35.2
-- Ebean: 17.5.0
-- Hibernate: 7.3.3.Final
-- Kotlin Exposed: 1.2.0
+- Quarkus: 3.39.3
+- Ebean: 19.5.0
+- Hibernate: 7.4.7.Final
 - Angular: 20 (signals, OnPush, rxResource)
 - Python: 3.13
 

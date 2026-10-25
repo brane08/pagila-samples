@@ -12,11 +12,14 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>25</java.version>
+    <rewrite-maven-plugin.version>6.46.1</rewrite-maven-plugin.version>
+    <rewrite-migrate-java.version>3.42.1</rewrite-migrate-java.version>
+    <!-- recipe applied by `mvn rewrite:run`; migration target, independent of java.version -->
+    <rewrite.recipe>org.openrewrite.java.migrate.UpgradeToJava21</rewrite.recipe>
 
     <quarkus.version>3.39.3</quarkus.version>
     <ebean.version>19.5.0</ebean.version>
     <hibernate.version>7.4.7.Final</hibernate.version>
-    <exposed.version>1.5.0</exposed.version>
     <transaction-api.version>2.0.1</transaction-api.version>
     <hikari-cp.version>7.1.0</hikari-cp.version>
     <postgresql.version>42.7.13</postgresql.version>
@@ -29,8 +32,6 @@
     <jacoco.version>0.8.14</jacoco.version>
     <coverage.min>0.70</coverage.min>
     <commons-lang3.version>3.20.0</commons-lang3.version>
-    <kotlin.version>2.4.10</kotlin.version>
-    <spring-crypto.version>6.2.3</spring-crypto.version>
     <wicket.version>10.10.0</wicket.version>
 
     <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
@@ -45,7 +46,6 @@
     <ebean-plugin.version>19.5.0</ebean-plugin.version>
     <flyway-maven-plugin.version>11.10.2</flyway-maven-plugin.version>
     <versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
-    <spring-boot.version>4.0.6</spring-boot.version>
   </properties>
 
   <modules>
@@ -53,8 +53,6 @@
     <module>data-ebean</module>
     <module>data-loader</module>
     <module>quarkus-htmx</module>
-    <module>spring-vaadin</module>
-    <module>data-exposed</module>
     <module>data-hibernate</module>
   </modules>
 
@@ -75,21 +73,6 @@
         <groupId>org.hibernate.orm</groupId>
         <artifactId>hibernate-core</artifactId>
         <version>${hibernate.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jetbrains.exposed</groupId>
-        <artifactId>exposed-core</artifactId>
-        <version>${exposed.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jetbrains.exposed</groupId>
-        <artifactId>exposed-jdbc</artifactId>
-        <version>${exposed.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jetbrains.exposed</groupId>
-        <artifactId>exposed-java-time</artifactId>
-        <version>${exposed.version}</version>
       </dependency>
       <dependency>
         <groupId>jakarta.transaction</groupId>
@@ -211,16 +194,6 @@
         <artifactId>junit-platform-engine</artifactId>
         <version>${junit5.version}</version>
       </dependency>
-      <dependency>
-        <groupId>io.ktor</groupId>
-        <artifactId>ktor-server-tests-jvm</artifactId>
-        <version>${ktor.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jetbrains.kotlin</groupId>
-        <artifactId>kotlin-test-junit5</artifactId>
-        <version>${kotlin.version}</version>
-      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -230,8 +203,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>${java.version}</source>
-          <target>${java.version}</target>
           <release>${java.version}</release>
           <compilerArgs>
             <arg>-Xlint:all</arg>
@@ -286,6 +257,27 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <!-- Not bound to the lifecycle. Preview: mvn rewrite:dryRun  Apply: mvn rewrite:run  (see docs in CLAUDE.md) -->
+      <plugin>
+        <groupId>org.openrewrite.maven</groupId>
+        <artifactId>rewrite-maven-plugin</artifactId>
+        <version>${rewrite-maven-plugin.version}</version>
+        <configuration>
+          <activeRecipes>
+            <recipe>${rewrite.recipe}</recipe>
+          </activeRecipes>
+          <exclusions>
+            <exclusion>**/target/**</exclusion>
+          </exclusions>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.openrewrite.recipe</groupId>
+            <artifactId>rewrite-migrate-java</artifactId>
+            <version>${rewrite-migrate-java.version}</version>
+          </dependency>
+        </dependencies>
       </plugin>
     </plugins>
     <pluginManagement>
