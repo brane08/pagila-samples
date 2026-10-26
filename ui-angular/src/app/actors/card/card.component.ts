@@ -3,7 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
-import { EMPTY } from 'rxjs';
+import { throwError } from 'rxjs';
 import { ActorsService } from '../../shared/services/actors.service';
 import { ActorDetail } from '../../shared/models/actors';
 
@@ -26,7 +26,7 @@ export class ActorCardComponent {
 
   actorResource = rxResource<ActorDetail, number>({
     params: () => this.actorId(),
-    stream: ({ params }) => params > 0 ? this.actorsService.getActorById(params) : EMPTY
+    stream: ({ params }) => params > 0 ? this.actorsService.getActorById(params) : throwError(() => new Error('Invalid actor id'))
   });
 
   filmGroups = computed(() => {

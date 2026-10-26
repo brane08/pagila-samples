@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -42,10 +43,10 @@ class RentalRepositoryTest {
         CustomerView view = new CustomerView();
         view.setId(7);
         view.setName("MARY SMITH");
-        jpa.rows(CustomerView.class, List.of(view));
+        when(em.find(CustomerView.class, 7)).thenReturn(view);
 
         assertEquals(7L, repository.findCustomerView(7).orElseThrow().getId());
-        verify(jpa.typed(CustomerView.class)).setMaxResults(1);
+        assertTrue(repository.findCustomerView(8).isEmpty());
     }
 
     @Test

@@ -38,7 +38,6 @@ public class RentalRepository extends JPARepository<Rental, Integer> {
     }
 
     public Optional<CustomerViewInfo> findCustomerView(int id) {
-        QueryParser<CustomerView> parser = buildParser("id==" + id, CustomerView.class);
-        return mapper.customerViewsToInfo(parser.getResults(0, 1, "")).stream().findFirst();
+        return Optional.ofNullable(em().find(CustomerView.class, id)).map(mapper::customerViewToInfo);
     }
 }
