@@ -22,7 +22,6 @@ public class ActorsResource {
     public static class Templates {
 
         public static native TemplateInstance list(List<ActorInfo> actors);
-        public static native TemplateInstance item(ActorInfo actor);
     }
 
     private final ActorsRepository repository;

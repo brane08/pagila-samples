@@ -11,11 +11,11 @@ alter table public.film
     add if not exists rating_txt varchar(10) default '';
 
 update public.film
-set rating_txt=rating::varchar;
+set rating_txt=rating::varchar
+where rating_txt is null
+   or rating_txt = '';
 
-drop view if exists public.film_list;
-
-CREATE VIEW public.film_list AS
+CREATE OR REPLACE VIEW public.film_list AS
 SELECT film.film_id                                                              AS fid,
        film.title,
        film.description,
@@ -36,9 +36,7 @@ GROUP BY film.film_id, film.title, film.description, category.name, film.rental_
 ALTER TABLE public.film_list
     OWNER TO postgres;
 
-drop view if exists public.nicer_but_slower_film_list;
-
-CREATE VIEW public.nicer_but_slower_film_list AS
+CREATE OR REPLACE VIEW public.nicer_but_slower_film_list AS
 SELECT film.film_id                                                                                                 AS fid,
        film.title,
        film.description,
@@ -60,7 +58,15 @@ GROUP BY film.film_id, film.title, film.description, category.name, film.rental_
 ALTER TABLE public.nicer_but_slower_film_list
     OWNER TO postgres;
 
-ALTER table public.language alter column name type varchar(20);
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1
+               FROM information_schema.columns
+               WHERE table_schema = 'public' AND table_name = 'language' AND column_name = 'name'
+                 AND (data_type <> 'character varying' OR character_maximum_length IS DISTINCT FROM 20)) THEN
+        ALTER TABLE public.language ALTER COLUMN name TYPE varchar(20);
+    END IF;
+END $$;
 
 -- Store views for ORM-based queries (replaces raw SQL in StoreRepository)
 

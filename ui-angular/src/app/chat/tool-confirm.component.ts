@@ -1,9 +1,10 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { ToolInfo } from '../chat.models';
 
 @Component({
   selector: 'app-tool-confirm',
   standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="d-flex justify-content-start mb-2 w-100">
       <div class="tool-confirm-card p-3">

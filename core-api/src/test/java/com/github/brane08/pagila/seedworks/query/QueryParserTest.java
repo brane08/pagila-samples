@@ -82,7 +82,13 @@ class QueryParserTest {
 
     @Test
     void expressionWithoutEqualsSignFails() {
-        assertThrows(IndexOutOfBoundsException.class, () -> new StubParser("title"));
+        InvalidQueryException ex = assertThrows(InvalidQueryException.class, () -> new StubParser("title"));
+        assertEquals("Malformed filter: title", ex.getMessage());
+    }
+
+    @Test
+    void emptySegmentFails() {
+        assertThrows(InvalidQueryException.class, () -> new StubParser("title==ACE;;length=gt=5"));
     }
 
     @Test

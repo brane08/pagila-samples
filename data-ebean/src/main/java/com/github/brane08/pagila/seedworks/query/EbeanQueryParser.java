@@ -60,6 +60,8 @@ public final class EbeanQueryParser<T> extends QueryParser<T> {
         } else if (QueryExpr.OP_GT.equalsIgnoreCase(expr.operator())) {
             Number value = NumberFormat.getInstance(Locale.ROOT).parse(expr.value());
             where.gt(expr.field(), value);
+        } else {
+            throw new InvalidQueryException("Unknown operator: " + expr.operator());
         }
     }
 

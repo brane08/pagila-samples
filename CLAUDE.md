@@ -29,22 +29,10 @@ Use Superpowers in this order:
 
 ## Task Tracking
 
-After spec approval:
-1. Create or update `.claude/memory/todo.md`.
-2. Use `.claude/memory/todo.md` as the source of truth.
-3. Use only: `PENDING:`, `DOING:`, `DONE:`, `BLOCKED:`.
-4. Group tasks under `## Setup`, `## Implementation`, `## Tests`, `## Review`.
-5. Keep tasks short and concrete.
-6. After each completed task:
-  - mark it `DONE:`
-  - promote one `PENDING:` item to `DOING:`
-  - add new work as `PENDING:`
-  - mark blockers `BLOCKED:`
-  - output only the next step
-7. Do not copy the full spec into `todo.md`.
-8. Prefer `.claude/memory/todo.md` over user-level auto-memory.
-9. Use `.claude/memory/MEMORY.md` as the index if it exists.
-10. Spec approval is incomplete until `todo.md` has at least one `PENDING:` item for each major area.
+Tracking pattern: `.claude/memory/tracking/todo.md` § Tracking pattern. Do not restate it.
+- Spec approval is incomplete until `tracking/items/` has at least one `PENDING` item for each major area.
+- Prefer `.claude/memory/` over user-level auto-memory; `.claude/memory/MEMORY.md` is the index.
+- After each completed task, output only the next step.
 
 ## Memory Safety
 

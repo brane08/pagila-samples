@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ChatComponent } from './chat/chat.component';
 
@@ -6,6 +6,7 @@ import { ChatComponent } from './chat/chat.component';
   selector: 'app-root',
   templateUrl: './app.component.html',
   standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
   title = 'ui-angular';

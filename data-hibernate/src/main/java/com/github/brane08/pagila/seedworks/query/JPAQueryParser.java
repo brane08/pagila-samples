@@ -63,13 +63,21 @@ public final class JPAQueryParser<T> extends QueryParser<T> {
             if (item.isEmpty()) {
                 continue;
             }
-            orders.add(item.startsWith("-") ? cb.desc(root.get(item.substring(1))) : cb.asc(root.get(item)));
+            orders.add(item.startsWith("-") ? cb.desc(field(root, item.substring(1))) : cb.asc(field(root, item)));
         }
         return orders;
     }
 
+    private static <X> Path<?> field(Root<X> root, String name) {
+        try {
+            return root.get(name);
+        } catch (IllegalArgumentException ex) {
+            throw new InvalidQueryException(name, ex);
+        }
+    }
+
     <X> Predicate toPredicate(CriteriaBuilder cb, Root<X> root, QueryExpr expr) throws ParseException {
-        Path<?> path = root.get(expr.field());
+        Path<?> path = field(root, expr.field());
 
         if (QueryExpr.OP_EQ.equalsIgnoreCase(expr.operator())) {
             return cb.equal(path, expr.value());
@@ -80,6 +88,6 @@ public final class JPAQueryParser<T> extends QueryParser<T> {
             Number value = NumberFormat.getInstance().parse(expr.value());
             return cb.gt((Expression<? extends Number>) path, value);
         }
-        return null;
+        throw new InvalidQueryException("Unknown operator: " + expr.operator());
     }
 }

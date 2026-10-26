@@ -85,6 +85,16 @@ class JPAQueryParserTest {
     }
 
     @Test
+    void unknownFieldThrowsInvalidQueryException() {
+        when(root.get("bogus")).thenThrow(new IllegalArgumentException("Unable to locate Attribute"));
+
+        InvalidQueryException ex = assertThrows(InvalidQueryException.class,
+                () -> parser("").toPredicate(cb, root, new QueryExpr("bogus", QueryExpr.OP_EQ, "x")));
+
+        assertEquals("Unknown field: bogus", ex.getMessage());
+    }
+
+    @Test
     void ltOperatorBuildsCbLtWithParsedNumber() throws Exception {
         Predicate lt = mock(Predicate.class);
         when(cb.lt(any(Expression.class), any(Number.class))).thenReturn(lt);
@@ -114,8 +124,11 @@ class JPAQueryParserTest {
     }
 
     @Test
-    void unknownOperatorYieldsNoPredicate() throws Exception {
-        assertNull(parser("").toPredicate(cb, root, new QueryExpr("title", "like", "ACA")));
+    void unknownOperatorThrowsInvalidQueryException() {
+        InvalidQueryException ex = assertThrows(InvalidQueryException.class,
+                () -> parser("").toPredicate(cb, root, new QueryExpr("title", "like", "ACA")));
+
+        assertEquals("Unknown operator: like", ex.getMessage());
     }
 
     @Test

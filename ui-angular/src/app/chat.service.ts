@@ -119,6 +119,13 @@ export class ChatService {
         });
         this.isLoading.set(false);
         break;
+
+      case 'error':
+        this._finalizeStreaming(event.message
+          ? `Sorry, something went wrong: ${event.message}`
+          : 'Sorry, something went wrong. Please try again.');
+        this.isLoading.set(false);
+        break;
     }
   }
 

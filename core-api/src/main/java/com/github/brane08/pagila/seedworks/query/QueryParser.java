@@ -31,6 +31,9 @@ public abstract class QueryParser<T> {
         }
         return Arrays.stream(queryPart.split(";")).map(item -> {
             String[] args = item.split("=", 3);
+            if (args.length != 3) {
+                throw new InvalidQueryException("Malformed filter: " + item);
+            }
             return new QueryExpr(args);
         }).toList();
     }
