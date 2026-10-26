@@ -167,7 +167,12 @@ export async function mockActorsApi(page: Page) {
   );
 }
 
+export const MOCK_CUSTOMER_DETAIL = { success: true, data: MOCK_CUSTOMERS_PAGE.data[0] };
+
 export async function mockCustomersApi(page: Page) {
+  await page.route(`${API}/rentals/@customers/*`, route =>
+    route.fulfill({ json: MOCK_CUSTOMER_DETAIL })
+  );
   await page.route(`${API}/rentals/@customers*`, route =>
     route.fulfill({ json: MOCK_CUSTOMERS_PAGE })
   );

@@ -38,6 +38,17 @@ class RentalRepositoryTest {
     }
 
     @Test
+    void findCustomerView_returnsMappedViewOrEmpty() {
+        CustomerView view = new CustomerView();
+        view.setId(7);
+        view.setName("MARY SMITH");
+        jpa.rows(CustomerView.class, List.of(view));
+
+        assertEquals(7L, repository.findCustomerView(7).orElseThrow().getId());
+        verify(jpa.typed(CustomerView.class)).setMaxResults(1);
+    }
+
+    @Test
     void listCustomerViews_mapsRowsAndCount() {
         CustomerView view = new CustomerView();
         view.setId(1);

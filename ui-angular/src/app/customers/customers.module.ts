@@ -3,6 +3,11 @@ import { CommonModule } from '@angular/common';
 import { CustomersRoutingModule } from "./customers-routing.module";
 import { CustomersComponent } from "./customers.component";
 import { CustomerListComponent } from "./list/list.component";
+import { CustomerCardComponent } from "./card/card.component";
+import { MatCardModule } from "@angular/material/card";
+import { MatDividerModule } from "@angular/material/divider";
+import { MatButtonModule } from "@angular/material/button";
+import { MatIconModule } from "@angular/material/icon";
 import { MatTableModule } from "@angular/material/table";
 import { MatPaginatorModule } from "@angular/material/paginator";
 import { MatTabsModule } from "@angular/material/tabs";
@@ -12,7 +17,8 @@ import { RouterModule } from "@angular/router";
 @NgModule({
   declarations: [
     CustomersComponent,
-    CustomerListComponent
+    CustomerListComponent,
+    CustomerCardComponent
   ],
   imports: [
     CommonModule,
@@ -21,6 +27,10 @@ import { RouterModule } from "@angular/router";
     MatPaginatorModule,
     MatTabsModule,
     MatProgressBarModule,
+    MatCardModule,
+    MatDividerModule,
+    MatButtonModule,
+    MatIconModule,
     RouterModule
   ]
 })
