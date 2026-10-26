@@ -10,6 +10,8 @@ import json
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage
+
 import httpx
 import pytest
 import pytest_asyncio
@@ -321,14 +323,14 @@ class TestSummarizationNode:
         assert system_msgs[0].content == SYSTEM_PROMPT
         assert result[-1].content == "Hello"
 
-    def test_prepare_messages_skips_if_system_present(self):
+    def test_prepare_messages_skips_if_system_prompt_already_present(self):
         from langchain_core.messages import HumanMessage, SystemMessage
-        from agent import _prepare_messages
+        from agent import _prepare_messages, SYSTEM_PROMPT
 
-        msgs = [SystemMessage(content="Custom prompt"), HumanMessage(content="Hi")]
+        msgs = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content="Hi")]
         result = _prepare_messages(msgs, "Some summary")
 
-        assert result is msgs  # unchanged — no prepend
+        assert result is msgs  # already has SYSTEM_PROMPT — no re-prepend
 
     @pytest.mark.asyncio
     async def test_summarize_history_node(self, monkeypatch):
@@ -443,3 +445,627 @@ class TestValidationNode:
         call_args = mock_classifier.ainvoke.call_args[0][0]
         assert any(isinstance(m, SystemMessage) and "topic classifier" in m.content for m in call_args)
         assert any(isinstance(m, HumanMessage) and "weather" in m.content for m in call_args)
+
+    @pytest.mark.asyncio
+    async def test_validation_prompt_references_sakila(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import HumanMessage, SystemMessage
+        import agent
+
+        mock_classifier = MagicMock()
+        mock_classifier.ainvoke = AsyncMock(return_value=agent.TopicCheck(relevant=True))
+        monkeypatch.setattr(agent, "classifier", mock_classifier)
+
+        state = {"messages": [HumanMessage(content="show me action films")], "summary": ""}
+        await agent.validate_input(state)
+
+        call_args = mock_classifier.ainvoke.call_args[0][0]
+        sys_msg = next(m for m in call_args if isinstance(m, SystemMessage))
+        assert "Sakila" in sys_msg.content
+        assert "off-topic" in sys_msg.content.lower() or "not" in sys_msg.content.lower()
+
+    @pytest.mark.asyncio
+    async def test_validate_rejects_sql_syntax_question(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage, HumanMessage
+        import agent
+
+        mock_classifier = MagicMock()
+        mock_classifier.ainvoke = AsyncMock(return_value=agent.TopicCheck(relevant=False))
+        monkeypatch.setattr(agent, "classifier", mock_classifier)
+
+        state = {"messages": [HumanMessage(content="How do I write a SQL JOIN?")], "summary": ""}
+        result = await agent.validate_input(state)
+
+        assert "messages" in result
+        assert isinstance(result["messages"][0], AIMessage)
+        assert "Sakila" in result["messages"][0].content
+
+
+# ── AgentState fields ──────────────────────────────────────────────────────────
+
+class TestAgentStateFields:
+    def test_agent_state_has_tool_retry_count(self):
+        from models import AgentState
+        state: AgentState = {
+            "messages": [],
+            "summary": "",
+            "tool_retry_count": 0,
+            "preferred_store_id": None,
+            "customer_email": None,
+            "user_id": "anonymous",
+        }
+        assert state["tool_retry_count"] == 0
+        assert state["preferred_store_id"] is None
+        assert state["customer_email"] is None
+        assert state["user_id"] == "anonymous"
+
+    def test_chat_request_has_user_id(self):
+        from models import ChatRequest
+        req = ChatRequest(message="hello", thread_id="t1", user_id="user-abc")
+        assert req.user_id == "user-abc"
+
+    def test_chat_request_user_id_defaults_to_anonymous(self):
+        from models import ChatRequest
+        req = ChatRequest(message="hello")
+        assert req.user_id == "anonymous"
+
+
+# ── Clarification node ─────────────────────────────────────────────────────────
+
+class TestClarificationNode:
+    def test_after_clarify_routes_to_human_review_when_tool_calls_remain(self):
+        from langchain_core.messages import AIMessage
+        import agent
+
+        ai_msg = AIMessage(content="")
+        ai_msg.tool_calls = [{"name": "get_customer_current_rentals", "args": {"email": None}, "id": "tc1"}]
+        state = {"messages": [ai_msg], "summary": "", "tool_retry_count": 0,
+                 "preferred_store_id": None, "customer_email": None, "user_id": "anon"}
+        assert agent._after_clarify(state) == "human_review"
+
+    def test_after_clarify_routes_to_end_when_question_added(self):
+        from langchain_core.messages import AIMessage
+        from langgraph.graph import END
+        import agent
+
+        ai_msg = AIMessage(content="What is the customer's email address?")
+        state = {"messages": [ai_msg], "summary": "", "tool_retry_count": 0,
+                 "preferred_store_id": None, "customer_email": None, "user_id": "anon"}
+        assert agent._after_clarify(state) is END
+
+    @pytest.mark.asyncio
+    async def test_clarify_passes_through_when_no_tool_calls(self, monkeypatch):
+        from langchain_core.messages import AIMessage
+        import agent
+
+        ai_msg = AIMessage(content="Here are the films.")
+        state = {"messages": [ai_msg], "summary": "", "tool_retry_count": 0,
+                 "preferred_store_id": None, "customer_email": None, "user_id": "anon"}
+        result = await agent.clarify_tool_args(state)
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_clarify_passes_through_when_args_complete(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage
+        import agent
+
+        mock_clf = MagicMock()
+        mock_clf.ainvoke = AsyncMock(
+            return_value=agent.ClarificationCheck(needs_clarification=False, question=None)
+        )
+        monkeypatch.setattr(agent, "clarification_classifier", mock_clf)
+
+        ai_msg = AIMessage(content="")
+        ai_msg.tool_calls = [{"name": "get_customer_current_rentals", "args": {"email": "jane@example.com"}, "id": "tc1"}]
+        state = {"messages": [ai_msg], "summary": "", "tool_retry_count": 0,
+                 "preferred_store_id": None, "customer_email": None, "user_id": "anon"}
+        result = await agent.clarify_tool_args(state)
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_clarify_replaces_tool_call_with_question(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage
+        import agent
+
+        mock_clf = MagicMock()
+        mock_clf.ainvoke = AsyncMock(
+            return_value=agent.ClarificationCheck(
+                needs_clarification=True,
+                question="What is the customer's email address?"
+            )
+        )
+        monkeypatch.setattr(agent, "clarification_classifier", mock_clf)
+
+        ai_msg = AIMessage(content="")
+        ai_msg.id = "msg-1"
+        ai_msg.tool_calls = [{"name": "get_customer_current_rentals", "args": {"email": None}, "id": "tc1"}]
+        state = {"messages": [ai_msg], "summary": "", "tool_retry_count": 0,
+                 "preferred_store_id": None, "customer_email": None, "user_id": "anon"}
+        result = await agent.clarify_tool_args(state)
+
+        assert "messages" in result
+        assert len(result["messages"]) == 2
+        assert isinstance(result["messages"][0], RemoveMessage)
+        assert result["messages"][0].id == "msg-1"
+        assert isinstance(result["messages"][1], AIMessage)
+        assert "email" in result["messages"][1].content.lower()
+
+
+# ── Tool error recovery ────────────────────────────────────────────────────────
+
+class TestToolErrorRecovery:
+    @pytest.mark.asyncio
+    async def test_no_error_resets_retry_count_routes_to_agent(self):
+        from langchain_core.messages import ToolMessage
+        import agent
+
+        tm = ToolMessage(content='{"film_id": 1, "title": "Jaws"}', tool_call_id="tc1", name="search_films")
+        state = {
+            "messages": [tm],
+            "summary": "",
+            "tool_retry_count": 1,
+            "preferred_store_id": None,
+            "customer_email": None,
+            "user_id": "anon",
+        }
+        result = await agent.handle_tool_errors(state)
+        assert result.get("tool_retry_count") == 0
+
+    @pytest.mark.asyncio
+    async def test_first_error_replaces_message_and_increments_retry(self):
+        from langchain_core.messages import ToolMessage
+        import agent
+
+        tm = ToolMessage(content='{"error": "connection timeout"}', tool_call_id="tc1", name="search_films")
+        tm.id = "tm-1"
+        state = {
+            "messages": [tm],
+            "summary": "",
+            "tool_retry_count": 0,
+            "preferred_store_id": None,
+            "customer_email": None,
+            "user_id": "anon",
+        }
+        result = await agent.handle_tool_errors(state)
+        assert result["tool_retry_count"] == 1
+        msgs = result["messages"]
+        assert any(isinstance(m, RemoveMessage) and m.id == "tm-1" for m in msgs)
+        hint_msgs = [m for m in msgs if isinstance(m, ToolMessage)]
+        assert hint_msgs and "alternative" in hint_msgs[0].content.lower()
+
+    @pytest.mark.asyncio
+    async def test_second_error_resets_retry_exposes_error(self):
+        from langchain_core.messages import ToolMessage
+        import agent
+
+        tm = ToolMessage(content='{"error": "table not found"}', tool_call_id="tc1", name="search_films")
+        state = {
+            "messages": [tm],
+            "summary": "",
+            "tool_retry_count": 1,
+            "preferred_store_id": None,
+            "customer_email": None,
+            "user_id": "anon",
+        }
+        result = await agent.handle_tool_errors(state)
+        assert result.get("tool_retry_count") == 0
+        assert "messages" not in result or not result["messages"]
+
+    @pytest.mark.asyncio
+    async def test_non_json_tool_content_treated_as_no_error(self):
+        from langchain_core.messages import ToolMessage
+        import agent
+
+        tm = ToolMessage(content="plain text result", tool_call_id="tc1", name="list_categories")
+        state = {
+            "messages": [tm],
+            "summary": "",
+            "tool_retry_count": 0,
+            "preferred_store_id": None,
+            "customer_email": None,
+            "user_id": "anon",
+        }
+        result = await agent.handle_tool_errors(state)
+        assert result.get("tool_retry_count") == 0
+
+
+# ── User preferences nodes ─────────────────────────────────────────────────────
+
+class TestUserPreferencesNodes:
+    @pytest.mark.asyncio
+    async def test_load_prefs_hydrates_state(self):
+        import agent
+
+        mock_pool = MagicMock()
+        mock_conn = AsyncMock()
+        mock_conn.fetchrow = AsyncMock(return_value={
+            "preferred_store_id": 2,
+            "customer_email": "jane@example.com",
+        })
+        mock_pool.acquire = MagicMock(return_value=AsyncMock(
+            __aenter__=AsyncMock(return_value=mock_conn),
+            __aexit__=AsyncMock(return_value=None),
+        ))
+
+        state = {"messages": [], "summary": "", "tool_retry_count": 0,
+                 "preferred_store_id": None, "customer_email": None, "user_id": "user-1"}
+        result = await agent.load_prefs(state, mock_pool)
+        assert result["preferred_store_id"] == 2
+        assert result["customer_email"] == "jane@example.com"
+
+    @pytest.mark.asyncio
+    async def test_load_prefs_noop_for_unknown_user(self):
+        import agent
+
+        mock_pool = MagicMock()
+        mock_conn = AsyncMock()
+        mock_conn.fetchrow = AsyncMock(return_value=None)
+        mock_pool.acquire = MagicMock(return_value=AsyncMock(
+            __aenter__=AsyncMock(return_value=mock_conn),
+            __aexit__=AsyncMock(return_value=None),
+        ))
+
+        state = {"messages": [], "summary": "", "tool_retry_count": 0,
+                 "preferred_store_id": None, "customer_email": None, "user_id": "unknown"}
+        result = await agent.load_prefs(state, mock_pool)
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_save_prefs_upserts_new_store_id(self):
+        import agent
+        from langchain_core.messages import ToolMessage
+
+        mock_pool = MagicMock()
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock()
+        mock_pool.acquire = MagicMock(return_value=AsyncMock(
+            __aenter__=AsyncMock(return_value=mock_conn),
+            __aexit__=AsyncMock(return_value=None),
+        ))
+
+        tm = ToolMessage(content='{"store_id": 1, "city": "Lethbridge"}', tool_call_id="tc1", name="list_stores")
+        state = {"messages": [tm], "summary": "", "tool_retry_count": 0,
+                 "preferred_store_id": None, "customer_email": None, "user_id": "user-1"}
+        result = await agent.save_prefs(state, mock_pool)
+        mock_conn.execute.assert_called_once()
+        assert result["preferred_store_id"] == 1
+
+    @pytest.mark.asyncio
+    async def test_save_prefs_skips_when_store_id_unchanged(self):
+        import agent
+        from langchain_core.messages import ToolMessage
+
+        mock_pool = MagicMock()
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock()
+        mock_pool.acquire = MagicMock(return_value=AsyncMock(
+            __aenter__=AsyncMock(return_value=mock_conn),
+            __aexit__=AsyncMock(return_value=None),
+        ))
+
+        tm = ToolMessage(content='{"store_id": 1}', tool_call_id="tc1", name="list_stores")
+        state = {"messages": [tm], "summary": "", "tool_retry_count": 0,
+                 "preferred_store_id": 1, "customer_email": None, "user_id": "user-1"}
+        await agent.save_prefs(state, mock_pool)
+        mock_conn.execute.assert_not_called()
+
+    def test_prepare_messages_injects_preference_context(self):
+        import agent
+
+        messages = [HumanMessage(content="show me films")]
+        result = agent._prepare_messages(messages, "", preferred_store_id=2, customer_email="jane@example.com")
+        sys_msgs = [m for m in result if isinstance(m, SystemMessage)]
+        combined = " ".join(m.content for m in sys_msgs)
+        assert "store" in combined.lower()
+        assert "jane@example.com" in combined
+
+
+# ── Reflection node ────────────────────────────────────────────────────────────
+
+class TestReflectionNode:
+    def test_agent_state_has_reflection_retry_count(self):
+        from models import AgentState
+        assert "reflection_retry_count" in AgentState.__annotations__
+        assert AgentState.__annotations__["reflection_retry_count"] is int
+        state: AgentState = {
+            "messages": [],
+            "summary": "",
+            "tool_retry_count": 0,
+            "reflection_retry_count": 0,
+            "preferred_store_id": None,
+            "customer_email": None,
+            "user_id": "anonymous",
+        }
+        assert state["reflection_retry_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_reflect_complete_passes_through(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage, HumanMessage
+        import agent
+
+        mock_clf = MagicMock()
+        mock_clf.ainvoke = AsyncMock(
+            return_value=agent.ReflectionCheck(complete=True, critique=None)
+        )
+        monkeypatch.setattr(agent, "reflection_classifier", mock_clf)
+
+        state = {
+            "messages": [
+                HumanMessage(content="What films do you have?"),
+                AIMessage(content="We have 1000 films.", id="ai-1"),
+            ],
+            "summary": "", "tool_retry_count": 0, "reflection_retry_count": 0,
+            "preferred_store_id": None, "customer_email": None, "user_id": "anon",
+        }
+        result = await agent.reflect_answer(state)
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_reflect_incomplete_retries_once(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+        import agent
+
+        mock_clf = MagicMock()
+        mock_clf.ainvoke = AsyncMock(
+            return_value=agent.ReflectionCheck(complete=False, critique="List specific film titles.")
+        )
+        monkeypatch.setattr(agent, "reflection_classifier", mock_clf)
+
+        state = {
+            "messages": [
+                HumanMessage(content="What action films do you have?"),
+                AIMessage(content="We have some action films.", id="ai-1"),
+            ],
+            "summary": "", "tool_retry_count": 0, "reflection_retry_count": 0,
+            "preferred_store_id": None, "customer_email": None, "user_id": "anon",
+        }
+        result = await agent.reflect_answer(state)
+        assert result["reflection_retry_count"] == 1
+        assert "messages" in result
+        assert len(result["messages"]) == 1
+        assert isinstance(result["messages"][0], SystemMessage)
+        assert "List specific film titles." in result["messages"][0].content
+
+    @pytest.mark.asyncio
+    async def test_reflect_no_second_retry(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage, HumanMessage
+        import agent
+
+        mock_clf = MagicMock()
+        mock_clf.ainvoke = AsyncMock(
+            return_value=agent.ReflectionCheck(complete=False, critique="Still vague.")
+        )
+        monkeypatch.setattr(agent, "reflection_classifier", mock_clf)
+
+        state = {
+            "messages": [
+                HumanMessage(content="What films?"),
+                AIMessage(content="Some films.", id="ai-1"),
+            ],
+            "summary": "", "tool_retry_count": 0, "reflection_retry_count": 1,
+            "preferred_store_id": None, "customer_email": None, "user_id": "anon",
+        }
+        result = await agent.reflect_answer(state)
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_reflect_noop_when_no_ai_message(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import HumanMessage
+        import agent
+
+        mock_clf = MagicMock()
+        mock_clf.ainvoke = AsyncMock()
+        monkeypatch.setattr(agent, "reflection_classifier", mock_clf)
+
+        state = {
+            "messages": [HumanMessage(content="Tell me films")],
+            "summary": "", "tool_retry_count": 0, "reflection_retry_count": 0,
+            "preferred_store_id": None, "customer_email": None, "user_id": "anon",
+        }
+        result = await agent.reflect_answer(state)
+        assert result == {}
+        mock_clf.ainvoke.assert_not_called()
+
+
+# ── Grounding node ────────────────────────────────────────────────────────────
+
+class TestGroundingNode:
+    @pytest.mark.asyncio
+    async def test_ground_clean_answer_no_warning(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+        import agent
+
+        mock_clf = MagicMock()
+        mock_clf.ainvoke = AsyncMock(
+            return_value=agent.GroundingCheck(hallucinated=False, warning=None)
+        )
+        monkeypatch.setattr(agent, "grounding_classifier", mock_clf)
+
+        tm = ToolMessage(
+            content='[{"title": "Jaws", "rating": "PG"}]',
+            tool_call_id="tc1", name="search_films",
+        )
+        ai = AIMessage(content="We have Jaws rated PG.", id="ai-1")
+        state = {
+            "messages": [HumanMessage(content="find Jaws"), tm, ai],
+            "summary": "", "tool_retry_count": 0, "reflection_retry_count": 0,
+            "preferred_store_id": None, "customer_email": None, "user_id": "anon",
+        }
+        result = await agent.ground_answer(state)
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_ground_hallucinated_appends_warning(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage, ToolMessage
+        import agent
+
+        mock_clf = MagicMock()
+        mock_clf.ainvoke = AsyncMock(
+            return_value=agent.GroundingCheck(
+                hallucinated=True,
+                warning="Film 'Sharknado' does not appear in tool results.",
+            )
+        )
+        monkeypatch.setattr(agent, "grounding_classifier", mock_clf)
+
+        tm = ToolMessage(
+            content='[{"title": "Jaws"}]',
+            tool_call_id="tc1", name="search_films",
+        )
+        ai = AIMessage(content="We have Jaws and Sharknado.", id="ai-1")
+        state = {
+            "messages": [HumanMessage(content="find shark films"), tm, ai],
+            "summary": "", "tool_retry_count": 0, "reflection_retry_count": 0,
+            "preferred_store_id": None, "customer_email": None, "user_id": "anon",
+        }
+        result = await agent.ground_answer(state)
+        assert "messages" in result
+        msgs = result["messages"]
+        assert any(isinstance(m, RemoveMessage) and m.id == "ai-1" for m in msgs)
+        new_ai = next(m for m in msgs if isinstance(m, AIMessage))
+        assert "⚠️ Warning:" in new_ai.content
+        assert "Sharknado" in new_ai.content
+
+    @pytest.mark.asyncio
+    async def test_ground_no_tool_messages_skips_check(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage, HumanMessage
+        import agent
+
+        mock_clf = MagicMock()
+        mock_clf.ainvoke = AsyncMock()
+        monkeypatch.setattr(agent, "grounding_classifier", mock_clf)
+
+        ai = AIMessage(content="Here are some films.", id="ai-1")
+        state = {
+            "messages": [HumanMessage(content="show films"), ai],
+            "summary": "", "tool_retry_count": 0, "reflection_retry_count": 0,
+            "preferred_store_id": None, "customer_email": None, "user_id": "anon",
+        }
+        result = await agent.ground_answer(state)
+        assert result == {}
+
+
+# ── /ui ────────────────────────────────────────────────────────────────────────
+
+class TestUiRoutes:
+    async def test_ui_root_returns_html(self, client):
+        with (
+            patch("ui_routes.list_sessions", AsyncMock(return_value=[])),
+            patch("ui_routes.get_asyncpg_pool", return_value=MagicMock()),
+        ):
+            resp = await client.get("/ui")
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+        assert "chat.js" in resp.text
+
+    async def test_ui_root_accepts_thread_id_param(self, client):
+        with (
+            patch("ui_routes.list_sessions", AsyncMock(return_value=[])),
+            patch("ui_routes.get_asyncpg_pool", return_value=MagicMock()),
+        ):
+            resp = await client.get("/ui?thread_id=abc-123")
+        assert resp.status_code == 200
+        assert "abc-123" in resp.text
+
+    async def test_ui_partials_sessions_returns_html(self, client):
+        with (
+            patch("ui_routes.list_sessions", AsyncMock(return_value=[])),
+            patch("ui_routes.get_asyncpg_pool", return_value=MagicMock()),
+        ):
+            resp = await client.get("/ui/partials/sessions")
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+
+    async def test_ui_partials_history_returns_html(self, client):
+        fake_history = {"messages": [{"role": "user", "content": "hi"}]}
+        with (
+            patch("ui_routes.get_session_history", AsyncMock(return_value=fake_history)),
+            patch("ui_routes.get_asyncpg_pool", return_value=MagicMock()),
+        ):
+            resp = await client.get("/ui/partials/history/t1")
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+
+    async def test_ui_delete_session_returns_html(self, client):
+        with (
+            patch("ui_routes.delete_session", AsyncMock(return_value=True)),
+            patch("ui_routes.list_sessions", AsyncMock(return_value=[])),
+            patch("ui_routes.get_asyncpg_pool", return_value=MagicMock()),
+        ):
+            resp = await client.delete("/ui/sessions/t1")
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+
+    async def test_ui_delete_unknown_session_returns_404(self, client):
+        with (
+            patch("ui_routes.delete_session", AsyncMock(return_value=False)),
+            patch("ui_routes.get_asyncpg_pool", return_value=MagicMock()),
+        ):
+            resp = await client.delete("/ui/sessions/nope")
+        assert resp.status_code == 404
+
+
+class TestAnalyticsRoute:
+    @pytest.mark.asyncio
+    async def test_analytics_returns_200_html(self, client):
+        fake_revenue = {
+            "total_revenue": 67416.51, "total_rentals": 16049,
+            "avg_per_rental": 4.20, "busiest_month": "2005-08",
+            "busiest_month_revenue": 24072.13, "by_store": [],
+        }
+        with (
+            patch("ui_routes.revenue_summary", AsyncMock(return_value=fake_revenue)),
+            patch("ui_routes.store_comparison", AsyncMock(return_value=[])),
+            patch("ui_routes.rental_stats_by_category", AsyncMock(return_value=[])),
+            patch("ui_routes.overdue_rentals", AsyncMock(return_value=[])),
+            patch("ui_routes.slow_moving_films", AsyncMock(return_value=[])),
+            patch("ui_routes.get_asyncpg_pool", return_value=MagicMock()),
+        ):
+            resp = await client.get("/ui/analytics")
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+
+    @pytest.mark.asyncio
+    async def test_analytics_shows_revenue_total(self, client):
+        fake_revenue = {
+            "total_revenue": 67416.51, "total_rentals": 16049,
+            "avg_per_rental": 4.20, "busiest_month": "2005-08",
+            "busiest_month_revenue": 24072.13, "by_store": [],
+        }
+        with (
+            patch("ui_routes.revenue_summary", AsyncMock(return_value=fake_revenue)),
+            patch("ui_routes.store_comparison", AsyncMock(return_value=[])),
+            patch("ui_routes.rental_stats_by_category", AsyncMock(return_value=[])),
+            patch("ui_routes.overdue_rentals", AsyncMock(return_value=[])),
+            patch("ui_routes.slow_moving_films", AsyncMock(return_value=[])),
+            patch("ui_routes.get_asyncpg_pool", return_value=MagicMock()),
+        ):
+            resp = await client.get("/ui/analytics")
+        assert "67416.51" in resp.text
+
+    @pytest.mark.asyncio
+    async def test_analytics_has_chart_canvas(self, client):
+        empty_rev = {
+            "total_revenue": 0.0, "total_rentals": 0, "avg_per_rental": 0.0,
+            "busiest_month": None, "busiest_month_revenue": 0.0, "by_store": [],
+        }
+        with (
+            patch("ui_routes.revenue_summary", AsyncMock(return_value=empty_rev)),
+            patch("ui_routes.store_comparison", AsyncMock(return_value=[])),
+            patch("ui_routes.rental_stats_by_category", AsyncMock(return_value=[])),
+            patch("ui_routes.overdue_rentals", AsyncMock(return_value=[])),
+            patch("ui_routes.slow_moving_films", AsyncMock(return_value=[])),
+            patch("ui_routes.get_asyncpg_pool", return_value=MagicMock()),
+        ):
+            resp = await client.get("/ui/analytics")
+        assert "category-chart" in resp.text

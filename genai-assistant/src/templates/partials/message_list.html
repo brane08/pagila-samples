@@ -1,0 +1,27 @@
+{% if messages %}
+  {% for msg in messages %}
+    {% if msg.role == "user" %}
+      <div class="d-flex justify-content-end">
+        <div class="bubble-user rounded-3 px-3 py-2 text-white bg-primary" style="max-width:75%">
+          <div>{{ msg.content }}</div>
+        </div>
+      </div>
+    {% elif msg.role == "ai" %}
+      <div class="d-flex justify-content-start">
+        <div class="bubble-ai rounded-3 px-3 py-2 bg-white border" style="max-width:85%">
+          <div class="ai-content">{{ render_ai_message(msg.content) | safe }}</div>
+        </div>
+      </div>
+    {% elif msg.role == "tool" %}
+      <div class="d-flex justify-content-center">
+        <span class="badge text-bg-warning text-dark">
+          <i class="bi bi-gear-fill"></i> {{ msg.content }}
+        </span>
+      </div>
+    {% endif %}
+  {% endfor %}
+{% else %}
+  <div id="chat-placeholder" class="text-muted fst-italic text-center m-auto small">
+    Ask me about films, actors, or rentals…
+  </div>
+{% endif %}

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pagila Film Assistant</title>
+  <link rel="stylesheet" href="/static/vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/vendor/bootstrap-icons.min.css">
+  <script src="/static/vendor/marked.min.js"></script>
+  <script src="/static/vendor/htmx.min.js"></script>
+  <link rel="stylesheet" href="/static/chat.css">
+  <script src="/static/chat.js" defer></script>
+</head>
+<body class="bg-light">
+<script>
+  const THREAD_ID = "{{ thread_id }}";
+  const USER_ID = "";
+</script>
+
+<div class="d-flex vh-100 overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside class="bg-white border-end d-flex flex-column" style="width:230px;min-width:180px;">
+    <div class="p-2 border-bottom">
+      <a href="/ui/analytics"
+         class="d-flex align-items-center gap-2 text-decoration-none text-dark rounded px-1 py-1 small">
+        <i class="bi bi-bar-chart-fill text-muted"></i> Analytics
+      </a>
+    </div>
+    <div id="sessions-sidebar"
+         class="d-flex flex-column flex-grow-1 overflow-hidden"
+         hx-get="/ui/partials/sessions"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <div class="p-2 text-muted small">Loading…</div>
+    </div>
+  </aside>
+
+  <!-- Chat panel -->
+  <main class="d-flex flex-column flex-grow-1 overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-primary text-white px-3 py-2 d-flex align-items-center gap-2 flex-shrink-0">
+      <i class="bi bi-robot fs-5"></i>
+      <span class="fw-semibold flex-grow-1">Pagila Film Assistant</span>
+      <button class="btn btn-sm btn-outline-light" onclick="newSession()">
+        <i class="bi bi-plus-lg"></i> New
+      </button>
+      <span class="text-white-50 small font-monospace d-none d-md-inline">{{ thread_id[:8] }}…</span>
+    </header>
+
+    <!-- Messages: auto-load history on page load; placeholder shown until first message -->
+    <div id="chat-messages"
+         class="flex-grow-1 overflow-y-auto p-3 d-flex flex-column gap-2"
+         hx-get="/ui/partials/history/{{ thread_id }}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <div id="chat-placeholder" class="text-muted fst-italic text-center m-auto small">
+        Ask me about films, actors, or rentals…
+      </div>
+    </div>
+
+    <!-- Tool confirm -->
+    <div id="tool-confirm" class="px-3 pb-2" style="display:none"></div>
+
+    <!-- Input -->
+    <div class="border-top bg-white px-3 py-2 d-flex gap-2 flex-shrink-0">
+      <textarea id="user-input"
+                class="form-control form-control-sm"
+                style="min-height:38px;max-height:150px;resize:none;overflow-y:auto"
+                placeholder="Ask about films, actors, rentals…"></textarea>
+      <button id="send-btn" class="btn btn-primary px-3" onclick="sendMessage()">
+        <i class="bi bi-send-fill"></i>
+      </button>
+    </div>
+
+  </main>
+</div>
+</body>
+</html>

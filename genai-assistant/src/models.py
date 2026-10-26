@@ -8,6 +8,7 @@ from pydantic import BaseModel
 class ChatRequest(BaseModel):
     message: str
     thread_id: str = "default"
+    user_id: str = "anonymous"
 
 
 class ChatResponse(BaseModel):
@@ -18,6 +19,11 @@ class ChatResponse(BaseModel):
 class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     summary: str
+    tool_retry_count: int
+    reflection_retry_count: int
+    preferred_store_id: int | None
+    customer_email: str | None
+    user_id: str
 
 
 # ── Session models ─────────────────────────────────────────────────────────────
