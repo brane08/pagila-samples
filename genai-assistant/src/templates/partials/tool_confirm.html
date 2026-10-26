@@ -1,0 +1,20 @@
+<div class="card border-primary shadow-sm" style="max-width:600px">
+  <div class="card-header bg-primary-subtle d-flex align-items-center gap-2">
+    <i class="bi bi-wrench-adjustable text-primary"></i>
+    <strong class="small">Tool Confirmation</strong>
+  </div>
+  <div class="card-body py-2">
+    <p class="mb-1 fw-medium small">{{ tool_name }}</p>
+    <div class="bg-light rounded p-2">
+      <pre class="mb-0 small overflow-auto" style="max-height:90px">{{ args }}</pre>
+    </div>
+  </div>
+  <div class="card-footer d-flex justify-content-end gap-2 py-2">
+    <button class="btn btn-sm btn-outline-secondary" onclick="confirmTool(false)">
+      <i class="bi bi-x-lg"></i> Reject
+    </button>
+    <button class="btn btn-sm btn-primary" onclick="confirmTool(true)">
+      <i class="bi bi-check-lg"></i> Approve
+    </button>
+  </div>
+</div>

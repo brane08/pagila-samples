@@ -1,0 +1,25 @@
+<div class="p-2 border-bottom">
+  <span class="small fw-semibold text-muted text-uppercase">Sessions</span>
+</div>
+<ul class="list-group list-group-flush overflow-y-auto flex-grow-1">
+{% for s in sessions %}
+  <li class="list-group-item p-0">
+    <a class="list-group-item list-group-item-action d-flex align-items-center gap-1 px-2 py-1 session-item border-0"
+       href="/ui?thread_id={{ s.thread_id }}"
+       title="{{ s.thread_id }}">
+      <i class="bi bi-chat-left-text text-muted small"></i>
+      <span class="flex-grow-1 text-truncate small font-monospace">{{ s.thread_id[:12] }}</span>
+      <button class="btn btn-link btn-sm p-0 text-muted delete-btn"
+              hx-delete="/ui/sessions/{{ s.thread_id }}"
+              hx-target="#sessions-sidebar"
+              hx-swap="innerHTML"
+              hx-confirm="Delete this session?"
+              onclick="event.preventDefault();event.stopPropagation()">
+        <i class="bi bi-x"></i>
+      </button>
+    </a>
+  </li>
+{% else %}
+  <li class="list-group-item text-muted small fst-italic">No sessions yet.</li>
+{% endfor %}
+</ul>
