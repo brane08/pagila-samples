@@ -3,6 +3,7 @@ import json
 import re
 import sys
 import uuid
+from pathlib import Path
 
 import mistune
 from fastapi import APIRouter, HTTPException, Request
@@ -21,7 +22,7 @@ from sessions import delete_session, get_session_history, list_sessions
 
 ui_router = APIRouter()
 
-templates = Jinja2Templates(directory="src/templates")
+templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 _KNOWN_TYPES = {
     "film_list":     ["title", "rating", "rental_rate", "length"],

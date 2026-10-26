@@ -1,6 +1,10 @@
 # Bug items
 
+## DEFERRED
+- DEFERRED: ui-angular npm audit: undici via @angular/build, dev-only, fix needs Angular 22 major bump (see findings/bugs.md#BG-012) | logged: 2026-10-26 | started: - | closed: - | revisit: Angular 22 upgrade
+
 ## DONE
+- DONE: genai-assistant static/template paths anchored to __file__ (see findings/bugs.md#BG-011) | logged: 2026-10-26 | started: 2026-10-26 | closed: 2026-10-26
 - DONE: data-ebean audit leftovers: totalPageCount, QueryParser '=' in values, Actor/Address equals null-id, parser silent drops (unknown operator / malformed segment -> InvalidQueryException -> 400 in JPA + Ebean parsers), StaffInfo.storeId mapped via staffToInfo in both StoreMappers (core-api 79, data-hibernate 140, data-ebean 189, quarkus-htmx 37 tests pass, JaCoCo gates met) (see findings/bugs.md#BG-010) | logged: 2026-10-26 | started: 2026-10-26 | closed: 2026-10-26
 - DONE: unknown FIQL field returns 400: InvalidQueryException in JPAQueryParser + mapper in quarkus-htmx (core-api 78, data-hibernate 139, quarkus-htmx 37 tests pass, JaCoCo gates met) (see findings/bugs.md#BG-006) | logged: 2026-09-14 | started: 2026-10-26 | closed: 2026-10-26
 - DONE: drop unused mapper fields in Stores/RentalsResource and their unit tests (see findings/bugs.md#BG-004) | logged: 2026-09-14 | started: 2026-10-26 | closed: 2026-10-26
