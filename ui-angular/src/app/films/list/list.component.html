@@ -2,6 +2,9 @@
   @if (filmsResource.isLoading()) {
     <mat-progress-bar mode="indeterminate"></mat-progress-bar>
   }
+  @if (filmsResource.error()) {
+    <p class="text-danger m-3">Failed to load films. Please try again.</p>
+  }
   <table [dataSource]="filmsResource.value() ?? []" mat-table>
     <ng-container matColumnDef="filmId">
       <th *matHeaderCellDef class="fw-bold" mat-header-cell>ID.</th>

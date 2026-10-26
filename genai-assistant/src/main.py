@@ -48,7 +48,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -94,26 +94,29 @@ async def chat(request: ChatRequest):
 
 async def _stream_agent_events(input_or_command, config: dict) -> AsyncIterator[str]:
     """Shared SSE generator: streams token/tool events, then emits done or tool_confirm."""
-    async for event in agent_app.astream_events(input_or_command, config=config, version="v2"):
-        kind = event["event"]
-        if kind == "on_chat_model_stream":
-            if event.get("metadata", {}).get("langgraph_node") == "agent":
-                chunk = event["data"]["chunk"]
-                if chunk.content:
-                    yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
-        elif kind == "on_tool_start":
-            yield f"data: {json.dumps({'type': 'tool_start', 'tool': event['name'], 'input': event['data'].get('input')})}\n\n"
-        elif kind == "on_tool_end":
-            yield f"data: {json.dumps({'type': 'tool_end', 'tool': event['name']})}\n\n"
+    try:
+        async for event in agent_app.astream_events(input_or_command, config=config, version="v2"):
+            kind = event["event"]
+            if kind == "on_chat_model_stream":
+                if event.get("metadata", {}).get("langgraph_node") == "agent":
+                    chunk = event["data"]["chunk"]
+                    if chunk.content:
+                        yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
+            elif kind == "on_tool_start":
+                yield f"data: {json.dumps({'type': 'tool_start', 'tool': event['name'], 'input': event['data'].get('input')})}\n\n"
+            elif kind == "on_tool_end":
+                yield f"data: {json.dumps({'type': 'tool_end', 'tool': event['name']})}\n\n"
 
-    state = await agent_app.aget_state(config)
-    if any(task.interrupts for task in state.tasks):
-        interrupts = [i for task in state.tasks for i in task.interrupts]
-        interrupt_value = interrupts[0].value
-        thread_id = config["configurable"]["thread_id"]
-        yield f"data: {json.dumps({'type': 'tool_confirm', 'thread_id': thread_id, 'tool_calls': interrupt_value.get('tool_calls', [])})}\n\n"
-    else:
-        yield 'data: {"type": "done"}\n\n'
+        state = await agent_app.aget_state(config)
+        if any(task.interrupts for task in state.tasks):
+            interrupts = [i for task in state.tasks for i in task.interrupts]
+            interrupt_value = interrupts[0].value
+            thread_id = config["configurable"]["thread_id"]
+            yield f"data: {json.dumps({'type': 'tool_confirm', 'thread_id': thread_id, 'tool_calls': interrupt_value.get('tool_calls', [])})}\n\n"
+        else:
+            yield 'data: {"type": "done"}\n\n'
+    except Exception as exc:
+        yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
 
 
 @app.post("/chat/stream")

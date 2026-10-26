@@ -2,6 +2,9 @@
   @if (actorsResource.isLoading()) {
     <mat-progress-bar mode="indeterminate"></mat-progress-bar>
   }
+  @if (actorsResource.error()) {
+    <p class="text-danger m-3">Failed to load actors. Please try again.</p>
+  }
   <table [dataSource]="actorsResource.value() ?? []" mat-table>
     <ng-container matColumnDef="actorId">
       <th *matHeaderCellDef class="fw-bold" mat-header-cell>ID</th>

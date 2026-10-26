@@ -1,6 +1,5 @@
 package com.github.brane08.pagila.rental.boundary;
 
-import com.github.brane08.pagila.rental.mapper.RentalMapper;
 import com.github.brane08.pagila.rental.repositories.RentalRepository;
 import com.github.brane08.pagila.seedworks.beans.PagedList;
 import org.junit.jupiter.api.Test;
@@ -28,12 +27,10 @@ class RentalsResourceUnitTest {
 
     @Mock
     RentalRepository repository;
-    @Mock
-    RentalMapper mapper;
 
     @Test
     void customerListQueriesRepositoryThenHitsUnboundTemplate() {
-        RentalsResource resource = new RentalsResource(repository, mapper);
+        RentalsResource resource = new RentalsResource(repository);
         doReturn(new PagedList<>(List.of("C"), 1)).when(repository).listCustomerViews(anyInt(), anyInt(), anyString());
 
         assertThrows(UnsatisfiedLinkError.class, () -> resource.customerList(2, 5, "id"));

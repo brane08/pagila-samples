@@ -2,6 +2,9 @@
   @if (customersResource.isLoading()) {
     <mat-progress-bar mode="indeterminate"></mat-progress-bar>
   }
+  @if (customersResource.error()) {
+    <p class="text-danger m-3">Failed to load customers. Please try again.</p>
+  }
   <table [dataSource]="customersResource.value() ?? []" mat-table>
     <ng-container matColumnDef="id">
       <th *matHeaderCellDef class="fw-bold" mat-header-cell>ID</th>
