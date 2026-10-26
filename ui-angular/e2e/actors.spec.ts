@@ -78,3 +78,12 @@ test.describe('Actor detail card', () => {
     await expect(page.getByRole('button', { name: /back/i })).toBeVisible();
   });
 });
+
+test.describe('Actor detail card errors', () => {
+  test('shows not-found state on 404', async ({ page }) => {
+    await mockActorsApi(page);
+    await page.route('http://localhost:8001/rest/actors/*', route => route.fulfill({ status: 404, body: '' }));
+    await page.goto('/actors/99999');
+    await expect(page.getByText('Actor not found.')).toBeVisible();
+  });
+});
