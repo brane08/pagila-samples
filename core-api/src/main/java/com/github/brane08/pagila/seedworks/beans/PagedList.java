@@ -5,6 +5,10 @@ import java.util.List;
 public record PagedList<T>(List<T> list, int totalCount) {
 
     public int totalPageCount() {
-        return Math.round(totalCount / list.size());
+        return totalPageCount(list.size());
+    }
+
+    public int totalPageCount(int pageSize) {
+        return pageSize <= 0 ? 0 : (int) Math.ceil((double) totalCount / pageSize);
     }
 }

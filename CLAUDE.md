@@ -90,7 +90,7 @@ ln -s "${PROJ}/.claude/memory" "$SYS_MEM"
 | `data-loader` | Java 25 | Ebean ORM + HikariCP | Standalone CLI to additively expand table data (e.g. `actor`) in `sakila`, plus slow-query showcase demos (N+1, missing index); no Quarkus/CDI |
 | `quarkus-htmx` | Java 25 | Quarkus + Hibernate (default) + HTMX + Qute | JSON REST at `/rest/*`, server-rendered HTML at `/ui/*`, port 8001. ORM switchable to Ebean manually (see pom comment, `orm-ebean/`) |
 | `go-web` | Go | stdlib net/http | Minimal REST API |
-| `ui-angular` | TypeScript | Angular 20 | Film browser SPA + embedded AI chat |
+| `ui-angular` | TypeScript | Angular 21 | Film browser SPA + embedded AI chat |
 | `genai-assistant` | Python 3.13 | FastAPI + LangGraph + MCP | AI agent backend |
 
 ---
@@ -101,7 +101,7 @@ ln -s "${PROJ}/.claude/memory" "$SYS_MEM"
 - Quarkus: 3.39.3
 - Ebean: 19.5.0
 - Hibernate: 7.4.7.Final
-- Angular: 20 (with signals, OnPush, `rxResource`)
+- Angular: 21 (with signals, OnPush, `rxResource`)
 - Python: 3.13 (pyproject.toml `requires-python = ">=3.11,<3.14"`)
 
 ---
@@ -209,7 +209,7 @@ Collection name: `film_descriptions`. Seed with `cd genai-assistant && .venv/bin
 ## Angular Conventions (ui-angular)
 
 - Lazy-loaded feature modules with `loadChildren`.
-- Data loading uses `rxResource<T, R>()` from `@angular/core/rxjs-interop` (Angular 20 API).
+- Data loading uses `rxResource<T, R>()` from `@angular/core/rxjs-interop` (Angular 20+ API).
 - `ChangeDetectionStrategy.OnPush` on all components.
 - `inject()` over constructor injection.
 - AI chat is a `MatDialog` opened from `AppComponent.openChat()`.
@@ -296,7 +296,7 @@ cd genai-assistant && uv run pytest tests/test_api.py::TestChatStream -v
 
 All originally planned features are complete:
 
-1. **Markdown rendering in chat** ✅ — `ngx-markdown@20` applied to AI messages
+1. **Markdown rendering in chat** ✅ — `ngx-markdown@21` applied to AI messages
 2. **`/admin/reindex` endpoint** ✅ — `POST /admin/reindex` (202) + `GET /admin/reindex` poll
 3. **Tool confirmation UX** ✅ — LangGraph `interrupt()` node + `POST /chat/confirm/{id}/stream`
 4. **Actor detail card** ✅ — `GET /actors/{id}` backend + Angular card component
