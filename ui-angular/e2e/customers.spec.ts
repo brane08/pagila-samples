@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockCustomersApi, MOCK_CUSTOMERS_PAGE } from './mocks';
+import { mockCustomersApi, MOCK_CUSTOMERS_PAGE, MOCK_CUSTOMER_DETAIL } from './mocks';
 
 test.describe('Customers page', () => {
   test.beforeEach(async ({ page }) => {
@@ -30,5 +30,34 @@ test.describe('Customers page', () => {
     const paginator = page.locator('mat-paginator');
     await expect(paginator).toBeVisible();
     await expect(paginator).toContainText(MOCK_CUSTOMERS_PAGE.totalCount.toString());
+  });
+});
+
+test.describe('Customer detail card', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockCustomersApi(page);
+    await page.goto('/customers/1');
+  });
+
+  test('shows name and id', async ({ page }) => {
+    const c = MOCK_CUSTOMER_DETAIL.data;
+    await expect(page.locator('mat-card-title')).toContainText(c.name);
+    await expect(page.locator('mat-card-subtitle')).toContainText(`#${c.id}`);
+  });
+
+  test('shows address details', async ({ page }) => {
+    const c = MOCK_CUSTOMER_DETAIL.data;
+    await expect(page.locator('.details')).toContainText(c.city);
+    await expect(page.locator('.details')).toContainText(c.country);
+  });
+
+  test('has a back button', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /back/i })).toBeVisible();
+  });
+
+  test('clicking a list row opens the card', async ({ page }) => {
+    await page.goto('/customers');
+    await page.locator('table[mat-table] tr[mat-row]').first().click();
+    await expect(page).toHaveURL(/\/customers\/1$/);
   });
 });

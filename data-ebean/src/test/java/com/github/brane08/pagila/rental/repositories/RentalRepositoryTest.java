@@ -103,6 +103,15 @@ class RentalRepositoryTest {
         return view;
     }
 
+    @Test
+    void findCustomerView_returnsMappedViewOrEmpty() {
+        when(customerQuery.findList()).thenReturn(List.of(customerView(7, "MARY SMITH")), List.of());
+
+        assertEquals(7L, repository.findCustomerView(7).orElseThrow().getId());
+        assertTrue(repository.findCustomerView(8).isEmpty());
+        verify(customerQuery, times(2)).setMaxRows(1);
+    }
+
     // ---- listCustomerViews ----
 
     @Test

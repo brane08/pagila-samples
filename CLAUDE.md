@@ -227,7 +227,7 @@ calls are intercepted with `page.route()` mocks.
 # Start the dev server (keep running in a separate terminal)
 cd ui-angular && ng serve
 
-# Run all e2e tests (~92 tests)
+# Run all e2e tests (~95 tests)
 cd ui-angular && npx playwright test
 
 # Run a single spec file
@@ -301,6 +301,7 @@ All originally planned features are complete:
 3. **Tool confirmation UX** ✅ — LangGraph `interrupt()` node + `POST /chat/confirm/{id}/stream`
 4. **Actor detail card** ✅ — `GET /actors/{id}` backend + Angular card component
 5. **Store detail card** ✅ — Angular card component using existing `GET /stores/{id}` backend
-6. **Angular unit tests** ✅ — Karma/Jasmine specs for actors/stores services and card components
+6. **Angular unit tests** ✅ — Karma/Jasmine specs for actors/stores/customers/films services and card components
+7. **Customer detail card** ✅ — `GET /rest/rentals/@customers/{id}` + Angular card component
 
-**Next options:** Customer detail card, films service unit tests, enable deferred quarkus-htmx REST tests.
+**Next options:** enable deferred quarkus-htmx REST tests.
