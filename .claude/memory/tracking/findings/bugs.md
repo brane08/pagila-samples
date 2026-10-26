@@ -41,3 +41,11 @@ Status: FIXED 2026-10-26 (all five components)
 ## BG-010
 Remaining flagged behaviours from the data-ebean audit (RV-002). Fixed: `PagedList.totalPageCount`, QueryParser `=` in values, Actor/Address equals on null id. Parser silent drops: FIXED 2026-10-26 (unknown operator: Hibernate put a null predicate into cb.and, Ebean ignored; malformed segment threw IndexOutOfBounds; both now InvalidQueryException -> 400). StaffInfo.storeId: FIXED 2026-10-26 (it was unmapped; explicit staffToInfo with @Mapping store.storeId in both StoreMappers, tests added).
 Status: FIXED 2026-10-26
+
+## BG-011
+genai-assistant `main.py` StaticFiles and `ui_routes.py` Jinja2Templates used cwd-relative `src/static` / `src/templates`; app only started from `genai-assistant/`. Now anchored to `Path(__file__).parent`. Not run: pytest unavailable on this machine.
+Status: FIXED 2026-10-26
+
+## BG-012
+`npm audit` in ui-angular: transitive `undici` 7.0.0-7.30.0 (high, EventSource DoS) via direct devDependency `@angular/build` ^21.2.28 (moderate). Dev tooling only, not in the browser bundle. Only fix is `npm audit fix --force` -> `@angular/build@22` (breaking major).
+Status: DEFERRED 2026-10-26 (revisit on Angular 22 upgrade)

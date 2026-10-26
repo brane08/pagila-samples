@@ -50,7 +50,7 @@ Persistent memory lives in **`.claude/memory/`** (version-controlled, shared acr
 |---|---|
 | `.claude/memory/MEMORY.md` | Index — loaded automatically each session |
 | `.claude/memory/project_overview.md` | Module map, key versions, project purpose |
-| `.claude/memory/genai_assistant_architecture.md` | FastAPI + LangGraph + MCP + Angular chat design |
+| `.claude/memory/genai_assistant_architecture.md` | FastAPI + LangGraph + MCP + HTMX chat UI design |
 | `.claude/memory/genai_assistant_next_steps.md` | Completed features, test suite status, what's next |
 | `.claude/memory/project_db_config.md` | DB name (sakila), app schema (public), LangGraph schema (langgraph) |
 
@@ -78,7 +78,7 @@ ln -s "${PROJ}/.claude/memory" "$SYS_MEM"
 | `data-loader` | Java 25 | Ebean ORM + HikariCP | Standalone CLI to additively expand table data (e.g. `actor`) in `sakila`, plus slow-query showcase demos (N+1, missing index); no Quarkus/CDI |
 | `quarkus-htmx` | Java 25 | Quarkus + Hibernate (default) + HTMX + Qute | JSON REST at `/rest/*`, server-rendered HTML at `/ui/*`, port 8001. ORM switchable to Ebean manually (see pom comment, `orm-ebean/`) |
 | `go-web` | Go | stdlib net/http | Minimal REST API |
-| `ui-angular` | TypeScript | Angular 21 | Film browser SPA + embedded AI chat |
+| `ui-angular` | TypeScript | Angular 21 | Film browser SPA; toolbar button opens the genai-assistant HTMX UI |
 | `genai-assistant` | Python 3.13 | FastAPI + LangGraph + MCP | AI agent backend |
 
 ---
@@ -160,8 +160,9 @@ DELETE /sessions/{id}
 ```
 
 **MCP servers** (`film_server.py`, `store_server.py`) are spawned as child processes over
-stdio at startup. Each has its own asyncpg pool. The Angular UI (`ui-angular`) opens the
-chat as a `MatDialog` from the toolbar button (smart_toy icon).
+stdio at startup. Each has its own asyncpg pool. The backend serves its own HTMX chat and
+analytics UI at `http://localhost:8000/ui`. The Angular toolbar button (smart_toy icon) opens it in a new tab
+(`Constants.ASSISTANT_UI_URL`).
 
 **Two connection pools** are required:
 - `asyncpg` — tool queries and session management
@@ -200,7 +201,7 @@ Collection name: `film_descriptions`. Seed with `cd genai-assistant && .venv/bin
 - Data loading uses `rxResource<T, R>()` from `@angular/core/rxjs-interop` (Angular 20+ API).
 - `ChangeDetectionStrategy.OnPush` on all components.
 - `inject()` over constructor injection.
-- AI chat is a `MatDialog` opened from `AppComponent.openChat()`.
+- AI chat lives in genai-assistant's HTMX UI; `AppComponent.openChat()` opens `Constants.ASSISTANT_UI_URL` in a new tab.
 
 ---
 
@@ -219,10 +220,10 @@ cd ui-angular && ng serve
 cd ui-angular && npx playwright test
 
 # Run a single spec file
-cd ui-angular && npx playwright test e2e/chat.spec.ts
+cd ui-angular && npx playwright test e2e/assistant-link.spec.ts
 
 # Run tests matching a name pattern
-cd ui-angular && npx playwright test --grep "SSE streaming"
+cd ui-angular && npx playwright test --grep "Error states"
 
 # Open the HTML report after a run
 cd ui-angular && npm run e2e:report
@@ -238,7 +239,7 @@ cd ui-angular && npm run e2e:report
 | `actors.spec.ts` | Actors tab, table columns, paginator, actor detail card |
 | `customers.spec.ts` | Customer table columns, paginator |
 | `stores.spec.ts` | Sales by Store + Staff tabs, tables, store detail card |
-| `chat.spec.ts` | Dialog open/close, SSE streaming, keyboard shortcuts, sessions sidebar |
+| `assistant-link.spec.ts` | Toolbar button opens the genai-assistant UI in a new tab |
 | `error-states.spec.ts` | API 500/network errors, empty results, no JS crash |
 | `mocks.ts` | Shared `page.route()` helpers and fixture data (not a test file) |
 
@@ -284,7 +285,7 @@ cd genai-assistant && uv run pytest tests/test_api.py::TestChatStream -v
 
 All originally planned features are complete:
 
-1. **Markdown rendering in chat** ✅ — `ngx-markdown@21` applied to AI messages
+1. **Markdown rendering in chat** ✅ — `mistune` server-side in the HTMX UI (`ui_routes.render_ai_message`)
 2. **`/admin/reindex` endpoint** ✅ — `POST /admin/reindex` (202) + `GET /admin/reindex` poll
 3. **Tool confirmation UX** ✅ — LangGraph `interrupt()` node + `POST /chat/confirm/{id}/stream`
 4. **Actor detail card** ✅ — `GET /actors/{id}` backend + Angular card component
