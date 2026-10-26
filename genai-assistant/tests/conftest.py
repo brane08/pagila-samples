@@ -10,6 +10,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../src"))
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "../.env"))
 
+# agent.py builds ChatOpenAI at import time; tests mock the model, but the client needs a key to construct.
+os.environ.setdefault("OPENROUTER_API_KEY", "test-key")
+
 _DB = dict(
     host=os.getenv("DB_HOST", "localhost"),
     port=int(os.getenv("DB_PORT", 5432)),

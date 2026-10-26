@@ -1,11 +1,11 @@
 ---
 name: genai-assistant-architecture
-description: "Python FastAPI + LangGraph agent over Pagila DB using MCP tools, OpenRouter LLM, and pgvector RAG; Angular chat UI fully implemented as MatDialog in ui-angular"
+description: "Python FastAPI + LangGraph agent over Pagila DB using MCP tools, OpenRouter LLM, and pgvector RAG; chat UI is the backend-served HTMX UI (/ui)"
 type: project
 ---
 
 Active branch: `genai-assistant` — Python AI backend in `genai-assistant/` module.
-Angular chat UI is embedded **inside `ui-angular`** (not a separate module).
+Chat UI is served by the backend itself (HTMX), not embedded in `ui-angular`.
 
 **Why:** Demonstrates AI-first database access pattern using agentic tooling (MCP),
 streaming (SSE), and vector search (RAG) over an existing relational DB.
@@ -30,13 +30,9 @@ contract with the frontend, and the dual connection pool requirement.
 - **db.py**: Two pools — asyncpg (tools + session queries, schema: public) and psycopg3
   (LangGraph checkpointer: autocommit=True, prepare_threshold=0, options="-c search_path=langgraph")
 
-## Frontend (ui-angular/src/app/)
-- **Fully implemented** — real SSE streaming connected to /chat/stream
-- **chat.component.ts/html**: MatDialog, SSE streaming, typing indicator, tool event badges
-- **chat.service.ts**: Signal-based state, `sendMessage()` → streamChat(), `loadSession()`
-- **agent.service.ts**: HTTP client wrapping all /chat and /sessions endpoints
-- **sessions.component.ts/html**: Session sidebar — list, switch, delete, new session
-- **tool-confirm.component.ts**: Wired into chat.component.html — approve/reject tool calls
-- Opened via toolbar `smart_toy` icon → `AppComponent.openChat()` → MatDialog
+## Frontend
+- **HTMX UI served by the backend** at `/ui` (`ui_routes.py`, `templates/`, `static/`, markdown via `mistune`): chat with SSE streaming, session list, tool confirm partial, analytics dashboard (`analytics_queries.py`).
+- Paths are cwd-relative (`src/static`, `src/templates`): start from `genai-assistant/`.
+- Angular (`ui-angular`) no longer embeds a chat: toolbar `smart_toy` icon → `AppComponent.openChat()` → `window.open(Constants.ASSISTANT_UI_URL)`. See DC-004 in `tracking/decisions.md`.
 
 ## [[genai_assistant_next_steps]]

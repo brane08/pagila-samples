@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
-import { ChatComponent } from './chat/chat.component';
+import { Constants } from './shared/common';
 
 @Component({
   selector: 'app-root',
@@ -11,16 +10,7 @@ import { ChatComponent } from './chat/chat.component';
 export class AppComponent {
   title = 'ui-angular';
 
-  constructor(private dialog: MatDialog) {}
-
   openChat(): void {
-    this.dialog.open(ChatComponent, {
-      width: '90vw',
-      maxWidth: '90vw',
-      height: '85vh',
-      panelClass: 'chat-dialog-panel',
-      disableClose: true,
-      ariaLabel: 'AI Assistant Chat',
-    });
+    window.open(Constants.ASSISTANT_UI_URL, '_blank', 'noopener');
   }
 }

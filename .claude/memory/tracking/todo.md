@@ -6,8 +6,8 @@ Counts per state and last-updated date per item file. No items here. Findings in
 |---|---|---|---|---|---|---|---|---|
 | items/design.md | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2026-10-26 |
 | items/feature.md | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2026-10-26 |
-| items/bugs.md | 0 | 0 | 0 | 0 | 0 | 0 | 10 | 2026-10-26 |
-| items/tests.md | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 2026-10-26 |
+| items/bugs.md | 0 | 0 | 0 | 0 | 0 | 1 | 11 | 2026-10-26 |
+| items/tests.md | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 2026-10-26 |
 | items/archive.md | - | - | - | - | - | - | 15 | 2026-10-26 |
 
 Other logs: `decisions.md` (DC-001..002), `review.md` (RV-001..002).

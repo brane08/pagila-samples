@@ -44,9 +44,7 @@ html, body {
 
   // fill the configured height
   .mat-mdc-dialog-container,
-  .mdc-dialog__surface,
-  app-chat,
-  .chat-dialog {
+  .mdc-dialog__surface {
     height: 100%;
   }
 }

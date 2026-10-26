@@ -18,11 +18,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
-          executablePath:
-            process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] ??
-            (process.platform === 'darwin'
-              ? `${process.env['HOME']}/Library/Caches/ms-playwright/chromium-1223/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`
-              : `${process.env['HOME']}/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome`),
+          executablePath: process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'],
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
         },
       },
