@@ -97,7 +97,7 @@ public class Address extends BaseModel {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Address that = (Address) o;
-        return addressId.equals(that.addressId);
+        return addressId != null && addressId.equals(that.addressId);
     }
 
     @Override

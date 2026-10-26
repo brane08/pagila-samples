@@ -48,7 +48,7 @@ public class Actor extends BaseModel {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Actor that = (Actor) o;
-        return actorId.equals(that.actorId) &&
+        return actorId != null && actorId.equals(that.actorId) &&
                 Objects.equals(firstName, that.firstName) &&
                 Objects.equals(lastName, that.lastName);
     }

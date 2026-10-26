@@ -30,7 +30,7 @@ public abstract class QueryParser<T> {
             return Collections.emptyList();
         }
         return Arrays.stream(queryPart.split(";")).map(item -> {
-            String[] args = item.split("=");
+            String[] args = item.split("=", 3);
             return new QueryExpr(args);
         }).toList();
     }

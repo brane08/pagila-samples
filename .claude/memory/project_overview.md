@@ -17,7 +17,7 @@ Multi-module educational project demonstrating the same DVD rental business doma
 - **data-hibernate**: Hibernate JPA entities (Java 25)
 - **quarkus-htmx**: Quarkus 3 consolidated app, port 8001: JSON `/rest/*` + HTMX/Qute `/ui/*`; Hibernate default, Ebean via manual switch
 - **go-web**: Go REST API (minimal stdlib)
-- **ui-angular**: Angular 20 film browser SPA + embedded AI chat (port 4200)
+- **ui-angular**: Angular 21 film browser SPA + embedded AI chat (port 4200)
 - **genai-assistant**: Python FastAPI + LangGraph + MCP agent (port 8000)
 
 ## Key Versions
@@ -25,7 +25,7 @@ Multi-module educational project demonstrating the same DVD rental business doma
 - Quarkus: 3.39.3
 - Ebean: 19.5.0
 - Hibernate: 7.4.7.Final
-- Angular: 20 (signals, OnPush, rxResource)
+- Angular: 21 (signals, OnPush, rxResource)
 - Python: 3.13
 
 ## Database
