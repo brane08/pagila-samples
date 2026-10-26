@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { CustomerCardComponent } from './card.component';
 import { CustomersService } from '../../shared/services/customers.service';
 
@@ -58,5 +58,14 @@ describe('CustomerCardComponent', () => {
   it('back() calls Location.back()', () => {
     component.back();
     expect(location.back).toHaveBeenCalled();
+  });
+
+  it('shows not-found state when the lookup fails', async () => {
+    service.getCustomerById.and.returnValue(throwError(() => new Error('404')));
+    const f = TestBed.createComponent(CustomerCardComponent);
+    f.detectChanges();
+    await f.whenStable();
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).textContent).toContain('Customer not found.');
   });
 });

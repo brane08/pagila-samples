@@ -2,7 +2,8 @@
   <mat-progress-bar mode="indeterminate"></mat-progress-bar>
 }
 
-@if (actorResource.value(); as actor) {
+@if (actorResource.hasValue()) {
+  @let actor = actorResource.value()!;
   <div class="actor-card-container">
     <button mat-stroked-button class="back-btn" (click)="back()">
       <mat-icon>arrow_back</mat-icon> Back

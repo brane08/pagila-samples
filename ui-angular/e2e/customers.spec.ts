@@ -61,3 +61,18 @@ test.describe('Customer detail card', () => {
     await expect(page).toHaveURL(/\/customers\/1$/);
   });
 });
+
+test.describe('Customer detail card errors', () => {
+  test('shows not-found state on 404', async ({ page }) => {
+    await mockCustomersApi(page);
+    await page.route('**/rentals/@customers/*', route => route.fulfill({ status: 404, body: '' }));
+    await page.goto('/customers/99999');
+    await expect(page.getByText('Customer not found.')).toBeVisible();
+  });
+
+  test('shows not-found state for a non-numeric id', async ({ page }) => {
+    await mockCustomersApi(page);
+    await page.goto('/customers/abc');
+    await expect(page.getByText('Customer not found.')).toBeVisible();
+  });
+});

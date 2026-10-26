@@ -1,5 +1,6 @@
 package com.github.brane08.pagila.rental.app;
 
+import com.github.brane08.pagila.rental.beans.CustomerViewInfo;
 import com.github.brane08.pagila.rental.mapper.RentalMapper;
 import com.github.brane08.pagila.rental.repositories.RentalRepository;
 import com.github.brane08.pagila.seedworks.beans.PageInfo;
@@ -15,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,9 +45,9 @@ class RentalsResourceUnitTest {
 
     @Test
     void getCustomerReturnsOkWhenFoundElseNotFound() {
-        com.github.brane08.pagila.rental.beans.CustomerViewInfo c = mock(com.github.brane08.pagila.rental.beans.CustomerViewInfo.class);
-        doReturn(java.util.Optional.of(c)).when(repository).findCustomerView(7);
-        doReturn(java.util.Optional.empty()).when(repository).findCustomerView(8);
+        CustomerViewInfo c = new CustomerViewInfo();
+        doReturn(Optional.of(c)).when(repository).findCustomerView(7);
+        doReturn(Optional.empty()).when(repository).findCustomerView(8);
 
         assertEquals(200, resource.getCustomer(7).getStatus());
         assertEquals(404, resource.getCustomer(8).getStatus());

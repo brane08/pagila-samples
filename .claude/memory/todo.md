@@ -23,3 +23,4 @@
 - PENDING: Review quarkus-htmx changes on JDK 25
 - DONE: fixed PagedList.totalPageCount, QueryParser '=' in values, Ebean size<=0/bare '-' sort/locale parse, Actor/Address equals null-id (tests updated)
 - DONE: customer detail card (GET /rest/rentals/@customers/{id}, Angular card, e2e), films+customers service specs (30 karma, 95 e2e)
+- DONE: review fixes (direct find lookups, card error states for actor/customer, e2e 404 tests, drop stray report)
