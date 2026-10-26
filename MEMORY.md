@@ -48,7 +48,7 @@ The `payment` table has no `last_update` column. `Payment.java` must not extend
 - LangGraph `human_review` interrupt node for tool confirmation UX
 - MCP servers: `film_server.py` (14 tools), `store_server.py` (6 tools)
 - pgvector RAG: `sentence-transformers/all-MiniLM-L6-v2`, collection `film_descriptions`
-- Angular chat UI: SSE streaming, markdown rendering (`ngx-markdown@20`), session sidebar,
+- Angular chat UI: SSE streaming, markdown rendering (`ngx-markdown@21`), session sidebar,
   tool event badges, tool confirmation dialog (`ToolConfirmComponent` wired)
 - `README.adoc` written for the genai-assistant module
 
@@ -87,7 +87,7 @@ cd genai-assistant && uv run pytest tests/test_film_tools.py -v  # MCP tools (ne
 
 ## genai-assistant: Pending Work (in agreed order)
 
-- [x] **1. Markdown rendering in chat** — `ngx-markdown@20` installed; `MarkdownModule.forRoot()`
+- [x] **1. Markdown rendering in chat** — `ngx-markdown@21` installed; `MarkdownModule.forRoot()`
   added to `app.module.ts`; AI messages render via `<markdown [data]="msg.text">`;
   SCSS updated (removed `white-space: pre-wrap`, added code/pre/blockquote styles).
 

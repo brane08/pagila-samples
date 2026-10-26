@@ -223,6 +223,20 @@ class EbeanQueryParserTest {
     }
 
     @Test
+    void bareMinusSortTokenIsIgnored() {
+        parser("").getResults(0, 5, "-,title");
+
+        verify(orderBy).asc("title");
+        verifyNoMoreInteractions(orderBy);
+    }
+
+    @Test
+    void nonPositiveSizeReturnsEmptyWithoutQuerying() {
+        assertEquals(java.util.List.of(), parser("").getResults(0, 0, "title"));
+        verifyNoInteractions(query);
+    }
+
+    @Test
     void emptyOrderAddsNoOrdering() {
         parser("").getResults(0, 5, "");
 

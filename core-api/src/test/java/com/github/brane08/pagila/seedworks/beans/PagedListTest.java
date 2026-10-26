@@ -18,17 +18,15 @@ class PagedListTest {
     }
 
     @Test
-    void totalPageCountDividesTotalByPageLength() {
-        // Current behaviour: plain integer division (5 / 2 = 2), Math.round is a no-op on int.
-        assertEquals(2, new PagedList<>(List.of("a", "b"), 5).totalPageCount());
+    void totalPageCountRoundsUp() {
+        assertEquals(3, new PagedList<>(List.of("a", "b"), 5).totalPageCount());
         assertEquals(5, new PagedList<>(List.of("a"), 5).totalPageCount());
+        assertEquals(3, new PagedList<>(List.of("a"), 5).totalPageCount(2));
     }
 
     @Test
-    void totalPageCountOnEmptyPageThrowsArithmeticException() {
-        // Current behaviour: division by list.size() == 0. Flagged for review.
-        PagedList<String> empty = new PagedList<>(List.of(), 0);
-
-        assertThrows(ArithmeticException.class, empty::totalPageCount);
+    void totalPageCountOnEmptyPageIsZero() {
+        assertEquals(0, new PagedList<>(List.of(), 0).totalPageCount());
+        assertEquals(0, new PagedList<>(List.of("a"), 5).totalPageCount(0));
     }
 }

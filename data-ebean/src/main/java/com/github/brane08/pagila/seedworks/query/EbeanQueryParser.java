@@ -9,6 +9,7 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -23,6 +24,9 @@ public final class EbeanQueryParser<T> extends QueryParser<T> {
 
     @Override
     public List<T> getResults(int offset, int size, String order) {
+        if (size <= 0) {
+            return List.of();
+        }
         Query<T> query = db.createQuery(this.resultClass());
         addPredicates(query, QueryExpr.OP_AND);
         appendSort(query, order);
@@ -51,10 +55,10 @@ public final class EbeanQueryParser<T> extends QueryParser<T> {
         if (QueryExpr.OP_EQ.equalsIgnoreCase(expr.operator())) {
             where.eq(expr.field(), expr.value());
         } else if (QueryExpr.OP_LT.equalsIgnoreCase(expr.operator())) {
-            Number value = NumberFormat.getInstance().parse(expr.value());
+            Number value = NumberFormat.getInstance(Locale.ROOT).parse(expr.value());
             where.lt(expr.field(), value);
         } else if (QueryExpr.OP_GT.equalsIgnoreCase(expr.operator())) {
-            Number value = NumberFormat.getInstance().parse(expr.value());
+            Number value = NumberFormat.getInstance(Locale.ROOT).parse(expr.value());
             where.gt(expr.field(), value);
         }
     }
@@ -75,7 +79,7 @@ public final class EbeanQueryParser<T> extends QueryParser<T> {
     }
 
     private List<String> splitExcludeEmpty(String input) {
-        return Arrays.stream(input.split(",")).filter(item -> (item != null && !item.isEmpty()))
+        return Arrays.stream(input.split(",")).filter(item -> !item.isEmpty() && !item.equals("-"))
                 .collect(Collectors.toList());
     }
 }

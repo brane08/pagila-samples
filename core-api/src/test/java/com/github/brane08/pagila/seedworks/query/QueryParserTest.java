@@ -86,9 +86,8 @@ class QueryParserTest {
     }
 
     @Test
-    void segmentsBeyondThirdEqualsPartAreSilentlyIgnored() {
-        // Current behaviour: "a==b=c" splits into [a, "", b, c]; only the third part becomes the value.
-        assertEquals(new QueryExpr("a", "", "b"), new StubParser("a==b=c").exprs().getFirst());
+    void equalsSignsInValueArePreserved() {
+        assertEquals(new QueryExpr("a", "", "b=c"), new StubParser("a==b=c").exprs().getFirst());
     }
 
     @Test
