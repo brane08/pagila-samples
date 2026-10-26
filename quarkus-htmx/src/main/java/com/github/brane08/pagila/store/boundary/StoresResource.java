@@ -6,7 +6,6 @@ import com.github.brane08.pagila.store.beans.StoreCustomerInfo;
 import com.github.brane08.pagila.store.beans.StoreInventoryInfo;
 import com.github.brane08.pagila.store.beans.StoreRentalInfo;
 import com.github.brane08.pagila.store.beans.StoreViewInfo;
-import com.github.brane08.pagila.store.mapper.StoreMapper;
 import com.github.brane08.pagila.store.repositories.StoreRepository;
 import io.quarkus.qute.CheckedTemplate;
 import io.quarkus.qute.TemplateInstance;
@@ -33,12 +32,10 @@ public class StoresResource {
     }
 
     private final StoreRepository repository;
-    private final StoreMapper mapper;
 
     @Inject
-    public StoresResource(StoreRepository repository, StoreMapper mapper) {
+    public StoresResource(StoreRepository repository) {
         this.repository = repository;
-        this.mapper = mapper;
     }
 
     @GET

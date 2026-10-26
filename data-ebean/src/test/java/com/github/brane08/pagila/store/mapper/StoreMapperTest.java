@@ -87,6 +87,16 @@ class StoreMapperTest {
     }
 
     @Test
+    void staffToInfoMapsStoreIdFromStoreRelation() {
+        Store store = new Store();
+        store.setStoreId(2);
+        Staff staff = staff(1);
+        staff.setStore(store);
+
+        assertEquals(Long.valueOf(2), mapper.staffToInfo(staff).getStoreId());
+    }
+
+    @Test
     void storeToInfoLeavesMissingManagerAndAddressNull() {
         Store store = new Store();
         store.setStoreId(2);

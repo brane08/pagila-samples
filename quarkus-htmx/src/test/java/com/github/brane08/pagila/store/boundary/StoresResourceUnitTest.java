@@ -1,7 +1,6 @@
 package com.github.brane08.pagila.store.boundary;
 
 import com.github.brane08.pagila.store.beans.StoreViewInfo;
-import com.github.brane08.pagila.store.mapper.StoreMapper;
 import com.github.brane08.pagila.store.repositories.StoreRepository;
 import jakarta.ws.rs.NotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +38,7 @@ class StoresResourceUnitTest {
 
     @BeforeEach
     void setUp() {
-        resource = new StoresResource(repository, mock(StoreMapper.class));
+        resource = new StoresResource(repository);
     }
 
     @Test

@@ -1,7 +1,6 @@
 package com.github.brane08.pagila.rental.boundary;
 
 import com.github.brane08.pagila.rental.beans.CustomerViewInfo;
-import com.github.brane08.pagila.rental.mapper.RentalMapper;
 import com.github.brane08.pagila.rental.repositories.RentalRepository;
 import com.github.brane08.pagila.seedworks.app.FiqlQueryBean;
 import com.github.brane08.pagila.seedworks.beans.PagedList;
@@ -24,12 +23,10 @@ public class RentalsResource {
     }
 
     private final RentalRepository repository;
-    private final RentalMapper mapper;
 
     @Inject
-    public RentalsResource(RentalRepository repository, RentalMapper mapper) {
+    public RentalsResource(RentalRepository repository) {
         this.repository = repository;
-        this.mapper = mapper;
     }
 
     @GET

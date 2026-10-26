@@ -2,6 +2,7 @@ package com.github.brane08.pagila.store.mapper;
 
 import com.github.brane08.pagila.seedworks.mapper.CommonConfig;
 import com.github.brane08.pagila.store.beans.SalesByStoreInfo;
+import com.github.brane08.pagila.store.beans.StaffInfo;
 import com.github.brane08.pagila.store.beans.StaffViewInfo;
 import com.github.brane08.pagila.store.beans.StoreCustomerInfo;
 import com.github.brane08.pagila.store.beans.StoreInfo;
@@ -9,6 +10,7 @@ import com.github.brane08.pagila.store.beans.StoreInventoryInfo;
 import com.github.brane08.pagila.store.beans.StoreRentalInfo;
 import com.github.brane08.pagila.store.beans.StoreViewInfo;
 import com.github.brane08.pagila.store.entities.SalesByStore;
+import com.github.brane08.pagila.store.entities.Staff;
 import com.github.brane08.pagila.store.entities.StaffView;
 import com.github.brane08.pagila.store.entities.Store;
 import com.github.brane08.pagila.store.entities.StoreCustomerView;
@@ -16,6 +18,7 @@ import com.github.brane08.pagila.store.entities.StoreInventoryView;
 import com.github.brane08.pagila.store.entities.StoreRentalView;
 import com.github.brane08.pagila.store.entities.StoreView;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
@@ -26,6 +29,9 @@ public interface StoreMapper {
     StoreMapper INSTANCE = Mappers.getMapper(StoreMapper.class);
 
     StoreInfo storeToInfo(Store store);
+
+    @Mapping(source = "store.storeId", target = "storeId")
+    StaffInfo staffToInfo(Staff staff);
 
     List<StoreInfo> storesToInfos(List<Store> list);
 

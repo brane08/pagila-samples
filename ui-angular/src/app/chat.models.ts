@@ -23,12 +23,13 @@ export interface ChatApiResponse {
 
 /** One event from the POST /chat/stream SSE endpoint */
 export interface SseEvent {
-  type: 'token' | 'tool_start' | 'tool_end' | 'done' | 'tool_confirm';
+  type: 'token' | 'tool_start' | 'tool_end' | 'done' | 'tool_confirm' | 'error';
   content?: string;
   tool?: string;
   input?: any;
   thread_id?: string;
   tool_calls?: Array<{ name: string; args: any; id: string }>;
+  message?: string;
 }
 
 // ── Session types ──────────────────────────────────────────────────────────────

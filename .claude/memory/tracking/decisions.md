@@ -1,6 +1,7 @@
-# Decisions
+# Decisions (DC-nnn)
 
-## quarkus-htmx
+## DC-001 — quarkus-htmx as the single Quarkus app
+Status: ACCEPTED (logged 2026-10-26, imported from legacy decisions.md)
 ```yaml
 module: quarkus-htmx (single Quarkus app)
 port: 8001
@@ -13,7 +14,12 @@ rest: films, actors, stores, rentals (JSON, /rest/*) incl. view/aggregate endpoi
 tests: REST contract tests in quarkus-htmx/src/test (need live DB)
 ```
 
-## Hibernate conventions
+## DC-002 — Hibernate conventions
+Status: ACCEPTED (logged 2026-10-26, imported from legacy decisions.md)
 - Sort params must be entity property names (filmId, actorId, storeId); `JPAQueryParser` applies order, no default order.
 - zip columns on `customer_list`/`staff_list` are `"zip code"` (quoted).
 - `Payment` must not extend `BaseModel`.
+
+## DC-003 — adopt the global tracking pattern
+Status: ACCEPTED 2026-10-26
+Replaced flat `.claude/memory/todo.md` (PENDING/DOING/DONE/BLOCKED under Setup/Implementation/Tests/Review) with `tracking/`. Rejected: keeping the flat file (no IDs, dates or findings links; D2 minors had nowhere to live).

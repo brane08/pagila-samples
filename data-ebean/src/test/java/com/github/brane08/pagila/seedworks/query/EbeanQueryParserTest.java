@@ -131,9 +131,11 @@ class EbeanQueryParserTest {
     }
 
     @Test
-    void unsupportedOperatorIsIgnored() throws ParseException {
-        parser("").appendCriteria(and, new QueryExpr("title", "like", "ACA"));
+    void unsupportedOperatorThrowsInvalidQueryException() {
+        InvalidQueryException ex = assertThrows(InvalidQueryException.class,
+                () -> parser("").appendCriteria(and, new QueryExpr("title", "like", "ACA")));
 
+        assertEquals("Unknown operator: like", ex.getMessage());
         verifyNoInteractions(and);
     }
 
