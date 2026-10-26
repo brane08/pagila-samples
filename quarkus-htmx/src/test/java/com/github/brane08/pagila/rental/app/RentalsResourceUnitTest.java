@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +39,16 @@ class RentalsResourceUnitTest {
     @BeforeEach
     void setUp() {
         resource = new RentalsResource(repository, mapper);
+    }
+
+    @Test
+    void getCustomerReturnsOkWhenFoundElseNotFound() {
+        com.github.brane08.pagila.rental.beans.CustomerViewInfo c = mock(com.github.brane08.pagila.rental.beans.CustomerViewInfo.class);
+        doReturn(java.util.Optional.of(c)).when(repository).findCustomerView(7);
+        doReturn(java.util.Optional.empty()).when(repository).findCustomerView(8);
+
+        assertEquals(200, resource.getCustomer(7).getStatus());
+        assertEquals(404, resource.getCustomer(8).getStatus());
     }
 
     @Test

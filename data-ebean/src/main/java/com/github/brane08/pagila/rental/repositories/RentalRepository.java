@@ -11,6 +11,7 @@ import io.ebean.Database;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
+import java.util.Optional;
 
 public class RentalRepository extends EbeanRepository<Rental, Integer> {
 
@@ -36,5 +37,10 @@ public class RentalRepository extends EbeanRepository<Rental, Integer> {
         List<CustomerView> list = parser.getResults(offset, size, order);
         long count = parser.getCount();
         return new PagedList<>(mapper.customerViewsToInfos(list), (int) count);
+    }
+
+    public Optional<CustomerViewInfo> findCustomerView(int id) {
+        QueryParser<CustomerView> parser = buildParser("id==" + id, CustomerView.class);
+        return mapper.customerViewsToInfos(parser.getResults(0, 1, "")).stream().findFirst();
     }
 }

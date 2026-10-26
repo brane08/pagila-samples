@@ -38,4 +38,16 @@ class RentalsResourceTest {
             .body("data[0].name", notNullValue())
             .body("data[0].city", notNullValue());
     }
+
+    @Test
+    void getCustomer_returnsViewOr404() {
+        given().urlEncodingEnabled(false)
+            .when().get("/rest/rentals/@customers/1")
+            .then().statusCode(200)
+            .body("data.id", is(1))
+            .body("data.name", notNullValue());
+        given().urlEncodingEnabled(false)
+            .when().get("/rest/rentals/@customers/99999")
+            .then().statusCode(404);
+    }
 }

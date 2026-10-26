@@ -10,6 +10,7 @@ import com.github.brane08.pagila.seedworks.repositories.JPARepository;
 import jakarta.persistence.EntityManager;
 
 import java.util.List;
+import java.util.Optional;
 
 public class RentalRepository extends JPARepository<Rental, Integer> {
 
@@ -34,5 +35,10 @@ public class RentalRepository extends JPARepository<Rental, Integer> {
         List<CustomerView> list = parser.getResults(offset, size, order);
         long count = parser.getCount();
         return new PagedList<>(mapper.customerViewsToInfo(list), (int) count);
+    }
+
+    public Optional<CustomerViewInfo> findCustomerView(int id) {
+        QueryParser<CustomerView> parser = buildParser("id==" + id, CustomerView.class);
+        return mapper.customerViewsToInfo(parser.getResults(0, 1, "")).stream().findFirst();
     }
 }

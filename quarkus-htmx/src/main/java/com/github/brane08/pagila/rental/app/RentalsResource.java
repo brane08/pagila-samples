@@ -47,4 +47,12 @@ public class RentalsResource {
                 fiqlBean.pageInfo().offset(), fiqlBean.pageInfo().size(), fiqlBean.pageInfo().order());
         return Response.ok(ApiResult.array(list.list(), list.totalCount())).build();
     }
+
+    @GET
+    @Path("/@customers/{id: \\d+}")
+    public Response getCustomer(@PathParam("id") int id) {
+        return repository.findCustomerView(id)
+                .map(c -> Response.ok(ApiResult.single(c)).build())
+                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
+    }
 }
