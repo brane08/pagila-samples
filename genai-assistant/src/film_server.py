@@ -4,6 +4,7 @@ import asyncpg
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
+from analytics_queries import rental_stats_by_category as _rental_stats_by_category
 from rag import semantic_search
 
 load_dotenv()
@@ -336,23 +337,7 @@ async def get_rental_stats_by_category() -> list[dict]:
     Bridges film category data with actual rental business performance.
     """
     pool = await _get_pool()
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            """
-            SELECT c.name AS category,
-                   COUNT(r.rental_id) AS rental_count,
-                   COALESCE(SUM(p.amount), 0) AS total_revenue
-            FROM category c
-            JOIN film_category fc ON c.category_id = fc.category_id
-            JOIN film f ON fc.film_id = f.film_id
-            JOIN inventory i ON f.film_id = i.film_id
-            JOIN rental r ON i.inventory_id = r.inventory_id
-            LEFT JOIN payment p ON r.rental_id = p.rental_id
-            GROUP BY c.name
-            ORDER BY total_revenue DESC
-            """
-        )
-        return [dict(r) for r in rows]
+    return await _rental_stats_by_category(pool)
 
 
 @mcp.tool()
