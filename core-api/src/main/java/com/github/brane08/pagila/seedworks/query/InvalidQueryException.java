@@ -8,6 +8,6 @@ public class InvalidQueryException extends IllegalArgumentException {
     }
 
     public InvalidQueryException(String field, Throwable cause) {
-        super("Unknown field: " + field, cause);
+        super("Unknown field: " + (field != null && field.length() > 64 ? field.substring(0, 64) + "..." : field), cause);
     }
 }

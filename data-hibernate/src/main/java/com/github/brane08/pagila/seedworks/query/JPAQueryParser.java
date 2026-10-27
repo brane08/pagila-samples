@@ -4,8 +4,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
 
-import java.text.NumberFormat;
-import java.text.ParseException;
+import jakarta.persistence.metamodel.PluralAttribute;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -43,12 +43,8 @@ public final class JPAQueryParser<T> extends QueryParser<T> {
 
     private void applyWhere(CriteriaQuery<?> query, Root<T> root) {
         List<Predicate> predicates = new ArrayList<>();
-        try {
-            for (QueryExpr expr : exprs()) {
-                predicates.add(toPredicate(cb, root, expr));
-            }
-        } catch (ParseException ex) {
-            throw new RuntimeException(ex);
+        for (QueryExpr expr : exprs()) {
+            predicates.add(toPredicate(cb, root, expr));
         }
         if (!predicates.isEmpty()) {
             query.where(cb.and(predicates.toArray(Predicate[]::new)));
@@ -69,23 +65,28 @@ public final class JPAQueryParser<T> extends QueryParser<T> {
     }
 
     private static <X> Path<?> field(Root<X> root, String name) {
+        Path<?> path;
         try {
-            return root.get(name);
+            path = root.get(name);
         } catch (IllegalArgumentException ex) {
             throw new InvalidQueryException(name, ex);
         }
+        if (path.getModel() instanceof PluralAttribute<?, ?, ?>) {
+            throw new InvalidQueryException("Field cannot be used for filtering or sorting: " + name);
+        }
+        return path;
     }
 
-    <X> Predicate toPredicate(CriteriaBuilder cb, Root<X> root, QueryExpr expr) throws ParseException {
+    <X> Predicate toPredicate(CriteriaBuilder cb, Root<X> root, QueryExpr expr) {
         Path<?> path = field(root, expr.field());
 
         if (QueryExpr.OP_EQ.equalsIgnoreCase(expr.operator())) {
-            return cb.equal(path, expr.value());
+            return cb.equal(path, coerce(expr.field(), path.getJavaType(), expr.value()));
         } else if (QueryExpr.OP_LT.equalsIgnoreCase(expr.operator())) {
-            Number value = NumberFormat.getInstance().parse(expr.value());
+            Number value = parseNumber(expr.field(), expr.value());
             return cb.lt((Expression<? extends Number>) path, value);
         } else if (QueryExpr.OP_GT.equalsIgnoreCase(expr.operator())) {
-            Number value = NumberFormat.getInstance().parse(expr.value());
+            Number value = parseNumber(expr.field(), expr.value());
             return cb.gt((Expression<? extends Number>) path, value);
         }
         throw new InvalidQueryException("Unknown operator: " + expr.operator());

@@ -11,6 +11,39 @@ function getOrCreateUserId() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function safeHref(href) {
+  try {
+    const url = new URL(href, window.location.origin);
+    return ["http:", "https:", "mailto:"].includes(url.protocol) ? href : null;
+  } catch {
+    return null;
+  }
+}
+
+// Model output is untrusted: escape raw HTML and drop non-http(s)/mailto links.
+marked.use({
+  renderer: {
+    html(token) {
+      return escapeHtml(token.text ?? token.raw ?? "");
+    },
+    link(token) {
+      const inner = this.parser.parseInline(token.tokens);
+      const href = safeHref(token.href);
+      if (!href) return inner;
+      return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${inner}</a>`;
+    },
+  },
+});
+
 function scrollToBottom() {
   const area = document.getElementById("chat-messages");
   if (area) area.scrollTop = area.scrollHeight;
@@ -93,17 +126,22 @@ const TABLE_COLUMNS = {
   store_list:    ["store_id", "city", "manager", "film_count"],
 };
 
-function jsonBlockToTable(text) {
+const TABLE_TOKEN = "PAGILATABLETOKEN";
+
+// Replaces known ```json blocks with placeholder tokens; the (escaped) tables are re-inserted after markdown parsing.
+function jsonBlockToTable(text, tables) {
   return text.replace(/```json\n(\{[\s\S]*?\})\n```/g, (match, raw) => {
     try {
       const data = JSON.parse(raw);
       const cols = TABLE_COLUMNS[data.type];
       if (!cols || !Array.isArray(data.items)) return match;
-      const header = cols.map(c => `<th>${c}</th>`).join("");
-      const rows = data.items.map(item =>
-        `<tr>${cols.map(c => `<td>${item[c] ?? ""}</td>`).join("")}</tr>`
-      ).join("");
-      return `<table class="ai-table table table-sm table-bordered"><thead class="table-light"><tr>${header}</tr></thead><tbody>${rows}</tbody></table>`;
+      const header = cols.map(c => `<th>${escapeHtml(c)}</th>`).join("");
+      const rows = data.items
+        .filter(item => item && typeof item === "object")
+        .map(item => `<tr>${cols.map(c => `<td>${escapeHtml(item[c] ?? "")}</td>`).join("")}</tr>`)
+        .join("");
+      tables.push(`<table class="ai-table table table-sm table-bordered"><thead class="table-light"><tr>${header}</tr></thead><tbody>${rows}</tbody></table>`);
+      return `\n\n${TABLE_TOKEN}${tables.length - 1}\n\n`;
     } catch {
       return match;
     }
@@ -111,18 +149,25 @@ function jsonBlockToTable(text) {
 }
 
 function finalizeMessage(contentEl, rawText) {
-  const withTables = jsonBlockToTable(rawText);
-  contentEl.innerHTML = marked.parse(withTables);
+  const tables = [];
+  let html = marked.parse(jsonBlockToTable(rawText, tables));
+  tables.forEach((table, i) => {
+    const token = `${TABLE_TOKEN}${i}`;
+    html = html.replace(`<p>${token}</p>`, table).replace(token, table);
+  });
+  contentEl.innerHTML = html;
   scrollToBottom();
 }
 
 // ── SSE stream reader ─────────────────────────────────────────────────────────
 
 async function readStream(response, contentEl) {
+  if (!response.ok) throw new Error(`Request failed (HTTP ${response.status})`);
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let rawText = "";
   let buffer = "";
+  let finished = false;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -144,12 +189,24 @@ async function readStream(response, contentEl) {
         const area = document.getElementById("chat-messages");
         const badge = document.createElement("div");
         badge.className = "d-flex justify-content-center";
-        badge.innerHTML = `<span class="badge text-bg-warning text-dark"><i class="bi bi-gear-fill"></i> ${event.tool}</span>`;
+        const label = document.createElement("span");
+        label.className = "badge text-bg-warning text-dark";
+        const icon = document.createElement("i");
+        icon.className = "bi bi-gear-fill";
+        label.append(icon, " ", String(event.tool ?? ""));
+        badge.appendChild(label);
         area.insertBefore(badge, contentEl.closest(".d-flex"));
         scrollToBottom();
       } else if (event.type === "tool_confirm") {
+        finished = true;
         renderToolConfirm(event);
+      } else if (event.type === "error") {
+        finished = true;
+        contentEl.textContent = "Error: " + (event.content ?? event.message ?? "request failed");
+        hideTyping();
+        setInputEnabled(true);
       } else if (event.type === "done") {
+        finished = true;
         finalizeMessage(contentEl, rawText);
         hideTyping();
         setInputEnabled(true);
@@ -157,6 +214,12 @@ async function readStream(response, contentEl) {
         htmx.ajax("GET", "/ui/partials/sessions", { target: "#sessions-sidebar", swap: "innerHTML" });
       }
     }
+  }
+
+  // Stream closed without done/error/tool_confirm: don't leave the input disabled.
+  if (!finished) {
+    hideTyping();
+    setInputEnabled(true);
   }
 }
 
@@ -202,9 +265,9 @@ function renderToolConfirm(event) {
         <strong class="small">Tool Confirmation</strong>
       </div>
       <div class="card-body py-2">
-        <p class="mb-1 fw-medium small">${tc.name || "unknown"}</p>
+        <p class="mb-1 fw-medium small" id="tool-confirm-name"></p>
         <div class="bg-light rounded p-2">
-          <pre class="mb-0 small overflow-auto" style="max-height:90px">${JSON.stringify(tc.args || {}, null, 2)}</pre>
+          <pre class="mb-0 small overflow-auto" id="tool-confirm-args" style="max-height:90px"></pre>
         </div>
       </div>
       <div class="card-footer d-flex justify-content-end gap-2 py-2">
@@ -216,6 +279,8 @@ function renderToolConfirm(event) {
         </button>
       </div>
     </div>`;
+  document.getElementById("tool-confirm-name").textContent = tc.name || "unknown";
+  document.getElementById("tool-confirm-args").textContent = JSON.stringify(tc.args || {}, null, 2);
   confirmEl.style.display = "block";
   hideTyping();
 }

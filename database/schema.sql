@@ -149,3 +149,12 @@ CREATE TABLE IF NOT EXISTS public.user_preferences (
     customer_email TEXT,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'user_preferences_store_fk') THEN
+        ALTER TABLE public.user_preferences
+            ADD CONSTRAINT user_preferences_store_fk
+            FOREIGN KEY (preferred_store_id) REFERENCES public.store (store_id) NOT VALID;
+    END IF;
+END $$;

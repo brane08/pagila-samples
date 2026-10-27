@@ -8,6 +8,7 @@ httpx.AsyncClient with the ASGI transport.
 
 import json
 import time
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage
@@ -164,6 +165,20 @@ class TestChatBlocking:
         resp = await client_no_agent.post("/chat", json={"message": "Hello", "thread_id": "t1"})
         assert resp.status_code == 503
 
+    @pytest.mark.parametrize("payload", [
+        {"message": "", "thread_id": "t1"},
+        {"message": "x" * 4001, "thread_id": "t1"},
+        {"message": "hi", "thread_id": "../etc"},
+        {"message": "hi", "thread_id": "t1", "user_id": "a b"},
+    ])
+    async def test_rejects_invalid_request(self, client, payload):
+        resp = await client.post("/chat", json=payload)
+        assert resp.status_code == 422
+
+    async def test_rejects_invalid_path_thread_id(self, client):
+        resp = await client.get("/sessions/bad%20id")
+        assert resp.status_code == 422
+
 
 # ── /chat/stream (SSE) ────────────────────────────────────────────────────────
 
@@ -212,8 +227,24 @@ class TestChatStream:
 
 # ── /chat/confirm/{thread_id}/stream ─────────────────────────────────────────
 
+class _PendingState:
+    tasks = [SimpleNamespace(interrupts=[SimpleNamespace(value={"tool_calls": []})])]
+
+
+class _IdleState:
+    tasks = []
+
+
+def _pending_then_idle(client_agent):
+    """First aget_state (the guard) reports a pending interrupt; later calls (post-stream) report none."""
+    client_agent.aget_state = AsyncMock(side_effect=[_PendingState(), _IdleState(), _IdleState()])
+
+
 class TestChatConfirm:
     async def test_approve_returns_event_stream(self, client):
+        import main as m
+
+        _pending_then_idle(m.agent_app)
         resp = await client.post(
             "/chat/confirm/thread-123/stream",
             json={"approved": True},
@@ -222,6 +253,9 @@ class TestChatConfirm:
         assert "text/event-stream" in resp.headers["content-type"]
 
     async def test_reject_returns_event_stream(self, client):
+        import main as m
+
+        _pending_then_idle(m.agent_app)
         resp = await client.post(
             "/chat/confirm/thread-123/stream",
             json={"approved": False},
@@ -229,6 +263,47 @@ class TestChatConfirm:
         assert resp.status_code == 200
         events = _parse_sse(resp.text)
         assert events[-1]["type"] == "done"
+
+    async def test_409_when_no_interrupt_pending(self, client):
+        resp = await client.post(
+            "/chat/confirm/thread-123/stream",
+            json={"approved": True},
+        )
+        assert resp.status_code == 409
+
+    async def test_chat_stream_409_when_interrupt_pending(self, client):
+        import main as m
+
+        m.agent_app.aget_state = AsyncMock(return_value=_PendingState())
+        resp = await client.post("/chat/stream", json={"message": "hi", "thread_id": "t1"})
+        assert resp.status_code == 409
+
+    async def test_chat_409_when_interrupt_pending(self, client):
+        import main as m
+
+        m.agent_app.aget_state = AsyncMock(return_value=_PendingState())
+        resp = await client.post("/chat", json={"message": "hi", "thread_id": "t1"})
+        assert resp.status_code == 409
+
+    async def test_chat_409_when_run_ends_in_interrupt(self, client):
+        import main as m
+
+        m.agent_app.ainvoke = AsyncMock(return_value={"messages": [], "__interrupt__": [object()]})
+        resp = await client.post("/chat", json={"message": "hi", "thread_id": "t1"})
+        assert resp.status_code == 409
+
+    async def test_stream_error_message_is_generic(self, client):
+        import main as m
+
+        async def _boom(*a, **k):
+            raise RuntimeError("password=secret host=db.internal")
+            yield  # pragma: no cover
+
+        m.agent_app.astream_events = _boom
+        resp = await client.post("/chat/stream", json={"message": "hi", "thread_id": "t1"})
+        events = _parse_sse(resp.text)
+        assert events[-1]["type"] == "error"
+        assert "secret" not in resp.text
 
     async def test_503_when_agent_not_ready(self, client_no_agent):
         resp = await client_no_agent.post(
@@ -423,6 +498,40 @@ class TestValidationNode:
         call_args = mock_classifier.ainvoke.call_args[0][0]
         assert any(isinstance(m, SystemMessage) and "topic classifier" in m.content for m in call_args)
         assert any(isinstance(m, HumanMessage) and "Titanic" in m.content for m in call_args)
+
+    @pytest.mark.asyncio
+    async def test_validate_input_short_followup_skips_classifier(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage, HumanMessage
+        import agent
+
+        mock_classifier = MagicMock()
+        mock_classifier.ainvoke = AsyncMock(return_value=agent.TopicCheck(relevant=False))
+        monkeypatch.setattr(agent, "classifier", mock_classifier)
+
+        state = {
+            "messages": [
+                HumanMessage(content="Show my rentals"),
+                AIMessage(content="What is your email?"),
+                HumanMessage(content="jane@example.com"),
+            ],
+            "summary": "",
+        }
+        assert await agent.validate_input(state) == {}
+        mock_classifier.ainvoke.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_validate_input_classifier_failure_fails_open(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import HumanMessage
+        import agent
+
+        mock_classifier = MagicMock()
+        mock_classifier.ainvoke = AsyncMock(side_effect=RuntimeError("llm down"))
+        monkeypatch.setattr(agent, "classifier", mock_classifier)
+
+        state = {"messages": [HumanMessage(content="Do you have any films starring Tom Hanks?")], "summary": ""}
+        assert await agent.validate_input(state) == {}
 
     @pytest.mark.asyncio
     async def test_validate_input_off_topic(self, monkeypatch):
@@ -632,9 +741,29 @@ class TestToolErrorRecovery:
         result = await agent.handle_tool_errors(state)
         assert result["tool_retry_count"] == 1
         msgs = result["messages"]
-        assert any(isinstance(m, RemoveMessage) and m.id == "tm-1" for m in msgs)
+        assert not any(isinstance(m, RemoveMessage) for m in msgs)
         hint_msgs = [m for m in msgs if isinstance(m, ToolMessage)]
-        assert hint_msgs and "alternative" in hint_msgs[0].content.lower()
+        assert hint_msgs and hint_msgs[0].id == "tm-1"
+        assert "alternative" in hint_msgs[0].content.lower()
+        assert "connection timeout" in hint_msgs[0].content
+
+    @pytest.mark.asyncio
+    async def test_stale_errors_from_earlier_turns_ignored(self):
+        from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+        import agent
+
+        old = ToolMessage(content='{"error": "old"}', tool_call_id="tc0", name="search_films", id="old-1")
+        ok = ToolMessage(content='{"title": "Jaws"}', tool_call_id="tc1", name="search_films", id="new-1")
+        state = {
+            "messages": [
+                HumanMessage(content="first"), AIMessage(content=""), old,
+                HumanMessage(content="second"), AIMessage(content=""), ok,
+            ],
+            "summary": "", "tool_retry_count": 0,
+            "preferred_store_id": None, "customer_email": None, "user_id": "anon",
+        }
+        result = await agent.handle_tool_errors(state)
+        assert result == {"tool_retry_count": 0}
 
     @pytest.mark.asyncio
     async def test_second_error_resets_retry_exposes_error(self):
@@ -673,6 +802,67 @@ class TestToolErrorRecovery:
 
 
 # ── User preferences nodes ─────────────────────────────────────────────────────
+
+class TestClarifyAllToolCalls:
+    @pytest.mark.asyncio
+    async def test_second_tool_call_is_checked(self, monkeypatch):
+        from langchain_core.messages import AIMessage
+        import agent
+
+        answers = [agent.ClarificationCheck(needs_clarification=False),
+                   agent.ClarificationCheck(needs_clarification=True, question="Which email?")]
+        clf = MagicMock()
+        clf.ainvoke = AsyncMock(side_effect=answers)
+        monkeypatch.setattr(agent, "clarification_classifier", clf)
+        ai = AIMessage(content="", id="ai-1", tool_calls=[
+            {"name": "a", "args": {}, "id": "1"}, {"name": "b", "args": {"email": None}, "id": "2"}])
+
+        result = await agent.clarify_tool_args({"messages": [ai]})
+
+        assert clf.ainvoke.call_count == 2
+        assert result["messages"][1].content == "Which email?"
+
+
+class TestPrefsHardening:
+    @pytest.mark.asyncio
+    async def test_save_prefs_ignores_invalid_email_and_old_turns(self):
+        from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+        import agent
+
+        pool = MagicMock()
+        conn = AsyncMock()
+        pool.acquire = MagicMock(return_value=AsyncMock(
+            __aenter__=AsyncMock(return_value=conn), __aexit__=AsyncMock(return_value=None),
+        ))
+        old = ToolMessage(content='{"store_id": 9}', tool_call_id="a", name="t")
+        bad = ToolMessage(content='{"email": "not an email; DROP"}', tool_call_id="b", name="t")
+        state = {
+            "messages": [HumanMessage(content="q1"), AIMessage(content=""), old,
+                         HumanMessage(content="q2"), AIMessage(content=""), bad],
+            "summary": "", "tool_retry_count": 0, "preferred_store_id": None,
+            "customer_email": None, "user_id": "user-1",
+        }
+        assert await agent.save_prefs(state, pool) == {}
+        conn.execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_summary_prompt_truncates_tool_output(self, monkeypatch):
+        from langchain_core.messages import HumanMessage, ToolMessage
+        import agent
+
+        captured = {}
+
+        async def fake_invoke(msgs):
+            captured["prompt"] = msgs[0].content
+            return MagicMock(content="sum")
+
+        monkeypatch.setattr(agent, "model", MagicMock(ainvoke=fake_invoke))
+        msgs = [HumanMessage(content="hi", id="h0"),
+                ToolMessage(content="X" * 5000, tool_call_id="a", name="t", id="t0")]
+        msgs += [HumanMessage(content=f"m{i}", id=f"h{i+1}") for i in range(agent.KEEP_LAST_N)]
+        await agent.summarize_history({"messages": msgs, "summary": ""})
+        assert captured["prompt"].count("X") <= agent.TOOL_SUMMARY_CHARS
+
 
 class TestUserPreferencesNodes:
     @pytest.mark.asyncio
@@ -852,7 +1042,7 @@ class TestReflectionNode:
             "preferred_store_id": None, "customer_email": None, "user_id": "anon",
         }
         result = await agent.reflect_answer(state)
-        assert result == {}
+        assert result == {"reflection_retry_count": 0}
 
     @pytest.mark.asyncio
     async def test_reflect_noop_when_no_ai_message(self, monkeypatch):

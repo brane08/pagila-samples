@@ -113,21 +113,24 @@ class EbeanQueryParserTest {
     }
 
     @Test
-    void ltWithNonNumericValueThrowsRuntimeExceptionCausedByParseException() {
+    void ltWithNonNumericValueThrowsInvalidQueryException() {
         EbeanQueryParser<Actor> p = parser("length=lt=abc");
 
-        RuntimeException ex = assertThrows(RuntimeException.class, p::getCount);
+        InvalidQueryException ex = assertThrows(InvalidQueryException.class, p::getCount);
 
-        assertInstanceOf(ParseException.class, ex.getCause());
+        assertEquals("Invalid number for length: abc", ex.getMessage());
     }
 
     @Test
-    void gtWithNonNumericValueThrowsRuntimeExceptionCausedByParseException() {
+    void gtWithNonNumericValueThrowsInvalidQueryException() {
         EbeanQueryParser<Actor> p = parser("length=gt=xyz");
 
-        RuntimeException ex = assertThrows(RuntimeException.class, p::getCount);
+        assertThrows(InvalidQueryException.class, p::getCount);
+    }
 
-        assertInstanceOf(ParseException.class, ex.getCause());
+    @Test
+    void numberWithTrailingGarbageIsRejected() {
+        assertThrows(InvalidQueryException.class, () -> parser("length=lt=5abc").getCount());
     }
 
     @Test

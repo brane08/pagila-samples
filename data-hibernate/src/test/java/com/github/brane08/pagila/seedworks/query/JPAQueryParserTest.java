@@ -85,6 +85,27 @@ class JPAQueryParserTest {
     }
 
     @Test
+    void eqCoercesValueToFieldJavaType() throws Exception {
+        Path<Object> lengthPath = mock(Path.class);
+        doReturn(Integer.class).when(lengthPath).getJavaType();
+        doReturn(lengthPath).when(root).get("length");
+        Predicate eq = mock(Predicate.class);
+        when(cb.equal(lengthPath, 60)).thenReturn(eq);
+
+        assertSame(eq, parser("").toPredicate(cb, root, new QueryExpr("length", QueryExpr.OP_EQ, "60")));
+    }
+
+    @Test
+    void eqWithUncoercibleValueThrowsInvalidQueryException() {
+        Path<Object> lengthPath = mock(Path.class);
+        doReturn(Integer.class).when(lengthPath).getJavaType();
+        doReturn(lengthPath).when(root).get("length");
+
+        assertThrows(InvalidQueryException.class,
+                () -> parser("").toPredicate(cb, root, new QueryExpr("length", QueryExpr.OP_EQ, "abc")));
+    }
+
+    @Test
     void unknownFieldThrowsInvalidQueryException() {
         when(root.get("bogus")).thenThrow(new IllegalArgumentException("Unable to locate Attribute"));
 
@@ -156,10 +177,27 @@ class JPAQueryParserTest {
     }
 
     @Test
-    void getCountWrapsNumericParseErrorInRuntimeException() {
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> parser("length=lt=abc").getCount());
+    void nonNumericLtValueThrowsInvalidQueryException() {
+        InvalidQueryException ex = assertThrows(InvalidQueryException.class,
+                () -> parser("length=lt=abc").getCount());
 
-        assertInstanceOf(java.text.ParseException.class, ex.getCause());
+        assertEquals("Invalid number for length: abc", ex.getMessage());
+    }
+
+    @Test
+    void numberWithTrailingGarbageIsRejected() {
+        assertThrows(InvalidQueryException.class, () -> parser("length=gt=5abc").getCount());
+    }
+
+    @Test
+    void pluralAttributeFieldIsRejected() {
+        Path<Object> actorsPath = mock(Path.class);
+        jakarta.persistence.metamodel.PluralAttribute<?, ?, ?> plural =
+                mock(jakarta.persistence.metamodel.PluralAttribute.class);
+        doReturn(plural).when(actorsPath).getModel();
+        doReturn(actorsPath).when(root).get("actors");
+
+        assertThrows(InvalidQueryException.class, () -> parser("").getResults(0, 5, "actors"));
     }
 
     @Test
