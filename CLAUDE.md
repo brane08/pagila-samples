@@ -19,14 +19,6 @@ Use Superpowers in this order:
 3. /superpowers:execute-plan
 4. /superpowers:finish
 
-## Model Policy
-
-- Allowed models: `sonnet`, `haiku` only. Never use opus or any other model.
-- `sonnet`: main session and any task needing reasoning (design, planning, debugging, review, non-trivial code).
-- `haiku`: subagents for non-thinking tasks (file search, grep/glob sweeps, running tests/builds, log summarizing, boilerplate, `todo.md`/memory updates, formatting).
-- When spawning a subagent, set `model` explicitly to one of the two above.
-- Haiku subagents: cap context at 100k tokens. Scope each task to fit, instruct the agent to compact at ~100k, and require compact YAML output (no file dumps).
-
 ## Task Tracking
 
 Tracking pattern: `.claude/memory/tracking/todo.md` § Tracking pattern. Do not restate it.
