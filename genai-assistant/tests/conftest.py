@@ -38,11 +38,15 @@ async def inject_pool():
         max_overflow=2,
     )
     store_server._engine = engine
+    film_server._engine = engine
+    analytics_server._engine = engine
 
     yield
 
     film_server._pool = None
     analytics_server._pool = None
     store_server._engine = None
+    film_server._engine = None
+    analytics_server._engine = None
     await pool.close()
     await engine.dispose()
