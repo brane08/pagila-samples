@@ -4,6 +4,8 @@ import com.github.brane08.pagila.seedworks.beans.PageInfo;
 
 public class FiqlQueryBean {
 
+    static final int MAX_SIZE = 500;
+
     public int page;
     public int size;
     public String sort;
@@ -29,6 +31,6 @@ public class FiqlQueryBean {
     }
 
     public PageInfo pageInfo() {
-        return new PageInfo(page, size, sort);
+        return new PageInfo(Math.max(page, 1), Math.min(Math.max(size, 1), MAX_SIZE), sort);
     }
 }

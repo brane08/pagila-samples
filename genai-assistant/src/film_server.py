@@ -52,6 +52,19 @@ async def _get_engine() -> AsyncEngine:
     return _engine
 
 
+MAX_LIMIT = 100
+_LIKE_ESCAPE = "\\"
+
+
+def _clamp(limit: int) -> int:
+    return max(1, min(int(limit), MAX_LIMIT))
+
+
+def _like(value: str) -> str:
+    """Escape LIKE wildcards so user text matches literally; pair with escape=_LIKE_ESCAPE."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 # ── Tools ──────────────────────────────────────────────────────────────────────
 
 @mcp.tool()
@@ -69,9 +82,9 @@ async def search_films(title: str, limit: int = 10) -> list[dict]:
             film.c.rental_rate,
             film.c.rental_duration,
         )
-        .where(film.c.title.ilike(f"%{title}%"))
+        .where(film.c.title.ilike(f"%{_like(title)}%", escape=_LIKE_ESCAPE))
         .order_by(film.c.title)
-        .limit(limit)
+        .limit(_clamp(limit))
     )
     async with engine.connect() as conn:
         result = await conn.execute(stmt)
@@ -135,9 +148,9 @@ async def list_films_by_category(category: str, limit: int = 10) -> list[dict]:
         .select_from(film)
         .join(film_category, film.c.film_id == film_category.c.film_id)
         .join(category_t, film_category.c.category_id == category_t.c.category_id)
-        .where(category_t.c.name.ilike(category))
+        .where(category_t.c.name.ilike(_like(category), escape=_LIKE_ESCAPE))
         .order_by(film.c.title)
-        .limit(limit)
+        .limit(_clamp(limit))
     )
     async with engine.connect() as conn:
         result = await conn.execute(stmt)
@@ -154,9 +167,9 @@ async def list_films_by_actor(actor_name: str, limit: int = 10) -> list[dict]:
         .select_from(film)
         .join(film_actor, film.c.film_id == film_actor.c.film_id)
         .join(actor, film_actor.c.actor_id == actor.c.actor_id)
-        .where(full_name.ilike(f"%{actor_name}%"))
+        .where(full_name.ilike(f"%{_like(actor_name)}%", escape=_LIKE_ESCAPE))
         .order_by(film.c.title)
-        .limit(limit)
+        .limit(_clamp(limit))
     )
     async with engine.connect() as conn:
         result = await conn.execute(stmt)
@@ -175,7 +188,7 @@ async def get_top_rented_films(limit: int = 10) -> list[dict]:
         .join(rental, inventory.c.inventory_id == rental.c.inventory_id)
         .group_by(film.c.film_id, film.c.title, film.c.rating)
         .order_by(rental_count.desc())
-        .limit(limit)
+        .limit(_clamp(limit))
     )
     async with engine.connect() as conn:
         result = await conn.execute(stmt)
@@ -261,14 +274,14 @@ async def search_actors(name: str, limit: int = 10) -> list[dict]:
         .outerjoin(film_actor, actor.c.actor_id == film_actor.c.actor_id)
         .where(
             or_(
-                full_name.ilike(f"%{name}%"),
-                actor.c.first_name.ilike(f"%{name}%"),
-                actor.c.last_name.ilike(f"%{name}%"),
+                full_name.ilike(f"%{_like(name)}%", escape=_LIKE_ESCAPE),
+                actor.c.first_name.ilike(f"%{_like(name)}%", escape=_LIKE_ESCAPE),
+                actor.c.last_name.ilike(f"%{_like(name)}%", escape=_LIKE_ESCAPE),
             )
         )
         .group_by(actor.c.actor_id, actor.c.first_name, actor.c.last_name)
         .order_by(actor.c.last_name, actor.c.first_name)
-        .limit(limit)
+        .limit(_clamp(limit))
     )
     async with engine.connect() as conn:
         result = await conn.execute(stmt)
@@ -325,7 +338,7 @@ async def list_top_actors(limit: int = 10) -> list[dict]:
         .join(film_actor, actor.c.actor_id == film_actor.c.actor_id)
         .group_by(actor.c.actor_id, actor.c.first_name, actor.c.last_name)
         .order_by(film_count.desc(), actor.c.last_name)
-        .limit(limit)
+        .limit(_clamp(limit))
     )
     async with engine.connect() as conn:
         result = await conn.execute(stmt)
@@ -344,7 +357,7 @@ async def get_customer_current_rentals(email: str) -> dict:
     full_name = customer.c.first_name.concat(" ").concat(customer.c.last_name)
     customer_stmt = select(
         customer.c.customer_id, full_name.label("full_name"), customer.c.email
-    ).where(customer.c.email.ilike(email))
+    ).where(customer.c.email.ilike(_like(email), escape=_LIKE_ESCAPE))
 
     async with engine.connect() as conn:
         customer_row = (await conn.execute(customer_stmt)).mappings().first()
@@ -401,7 +414,7 @@ async def get_recently_returned_films(limit: int = 10, store_id: int | None = No
         .join(film, inventory.c.film_id == film.c.film_id)
         .where(rental.c.return_date.is_not(None))
         .order_by(rental.c.return_date.desc())
-        .limit(limit)
+        .limit(_clamp(limit))
     )
     if store_id is not None:
         stmt = stmt.where(inventory.c.store_id == store_id)

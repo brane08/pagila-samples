@@ -1,4 +1,5 @@
 import asyncio
+import html
 import json
 import re
 import sys
@@ -33,43 +34,62 @@ _KNOWN_TYPES = {
 }
 
 _JSON_BLOCK_RE = re.compile(r"```json\n(\{.*?\})\n```", re.DOTALL)
+_TABLE_TOKEN = "PAGILATABLETOKEN"
+_THREAD_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
+_markdown = mistune.create_markdown(escape=True)
 
 
 def _items_to_table(type_key: str, items: list[dict]) -> str:
     cols = _KNOWN_TYPES.get(type_key)
     if cols is None or not items:
         return ""
-    header = "".join(f"<th>{c}</th>" for c in cols)
+    header = "".join(f"<th>{html.escape(c)}</th>" for c in cols)
     rows = ""
     for item in items:
-        cells = "".join(f"<td>{item.get(c, '')}</td>" for c in cols)
+        if not isinstance(item, dict):
+            continue
+        cells = "".join(f"<td>{html.escape(str(item.get(c, '')))}</td>" for c in cols)
         rows += f"<tr>{cells}</tr>"
     return f'<table class="ai-table"><thead><tr>{header}</tr></thead><tbody>{rows}</tbody></table>'
 
 
 def render_ai_message(text: str) -> str:
+    """Render model output to HTML. Raw HTML in the text is escaped; only our own tables are trusted."""
+    tables: list[str] = []
+
     def _replace(match: re.Match) -> str:
         raw = match.group(1)
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
             return match.group(0)
+        if not isinstance(data, dict):
+            return match.group(0)
         type_key = data.get("type", "")
         items = data.get("items", [])
-        if type_key not in _KNOWN_TYPES:
+        if type_key not in _KNOWN_TYPES or not isinstance(items, list):
             return match.group(0)
         table = _items_to_table(type_key, items)
-        return table if table else match.group(0)
+        if not table:
+            return match.group(0)
+        tables.append(table)
+        return f"\n\n{_TABLE_TOKEN}{len(tables) - 1}\n\n"
 
     processed = _JSON_BLOCK_RE.sub(_replace, text)
-    return mistune.html(processed)
+    rendered = _markdown(processed)
+    for i, table in enumerate(tables):
+        token = f"{_TABLE_TOKEN}{i}"
+        rendered = rendered.replace(f"<p>{token}</p>", table).replace(token, table)
+    return rendered
 
 
 @ui_router.get("/ui", response_class=HTMLResponse)
 async def ui_root(request: Request, thread_id: str | None = None):
     pool = get_asyncpg_pool()
     sessions = await list_sessions(pool)
-    if thread_id is None:
+    if thread_id is None or not _THREAD_ID_RE.fullmatch(thread_id):
         thread_id = str(uuid.uuid4())
     return templates.TemplateResponse(
         request,
@@ -91,10 +111,14 @@ async def ui_sessions(request: Request):
 
 @ui_router.get("/ui/partials/history/{thread_id}", response_class=HTMLResponse)
 async def ui_history(request: Request, thread_id: str):
-    # Run as a script (`python src/main.py`), the live app is __main__, not an importable `main`.
-    _main = sys.modules.get("__main__")
-    if not hasattr(_main, "agent_app"):
-        import main as _main
+    # Run as a script (`python src/main.py`) the live app is __main__; otherwise it is the imported `main`.
+    # Never import `main` here: that would build a second app with no agent.
+    _main = next(
+        (m for m in (sys.modules.get("__main__"), sys.modules.get("main")) if hasattr(m, "agent_app")),
+        None,
+    )
+    if _main is None or _main.agent_app is None:
+        raise HTTPException(status_code=503, detail="Agent not ready")
     history = await get_session_history(_main.agent_app, thread_id)
     if history is None:
         raise HTTPException(status_code=404, detail="Session not found")

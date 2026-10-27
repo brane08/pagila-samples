@@ -4,12 +4,11 @@ import io.ebean.Database;
 import io.ebean.Junction;
 import io.ebean.OrderBy;
 import io.ebean.Query;
+import io.ebean.plugin.BeanType;
+import io.ebean.plugin.SpiServer;
 
-import java.text.NumberFormat;
-import java.text.ParseException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -43,23 +42,30 @@ public final class EbeanQueryParser<T> extends QueryParser<T> {
     void addPredicates(final Query<T> query, final String op) {
         Junction<T> where = (QueryExpr.OP_AND.equalsIgnoreCase(op)) ? query.where().and() : query.where().or();
         for (QueryExpr expr : exprs()) {
-            try {
-                appendCriteria(where, expr);
-            } catch (ParseException e) {
-                throw new RuntimeException(e);
-            }
+            appendCriteria(where, expr);
         }
     }
 
-    void appendCriteria(final Junction<T> where, final QueryExpr expr) throws ParseException {
+    /** Unknown filter/sort properties are a client error (400), not an Ebean failure at query time (500). */
+    private void requireKnownProperty(String name) {
+        SpiServer server = db.pluginApi();
+        BeanType<T> type = server == null ? null : server.beanType(resultClass());
+        if (type != null && type.property(name) == null) {
+            throw new InvalidQueryException(name, null);
+        }
+    }
+
+    void appendCriteria(final Junction<T> where, final QueryExpr expr) {
+        if (QueryExpr.OP_EQ.equalsIgnoreCase(expr.operator()) || QueryExpr.OP_LT.equalsIgnoreCase(expr.operator())
+                || QueryExpr.OP_GT.equalsIgnoreCase(expr.operator())) {
+            requireKnownProperty(expr.field());
+        }
         if (QueryExpr.OP_EQ.equalsIgnoreCase(expr.operator())) {
             where.eq(expr.field(), expr.value());
         } else if (QueryExpr.OP_LT.equalsIgnoreCase(expr.operator())) {
-            Number value = NumberFormat.getInstance(Locale.ROOT).parse(expr.value());
-            where.lt(expr.field(), value);
+            where.lt(expr.field(), parseNumber(expr.field(), expr.value()));
         } else if (QueryExpr.OP_GT.equalsIgnoreCase(expr.operator())) {
-            Number value = NumberFormat.getInstance(Locale.ROOT).parse(expr.value());
-            where.gt(expr.field(), value);
+            where.gt(expr.field(), parseNumber(expr.field(), expr.value()));
         } else {
             throw new InvalidQueryException("Unknown operator: " + expr.operator());
         }
@@ -72,8 +78,10 @@ public final class EbeanQueryParser<T> extends QueryParser<T> {
             OrderBy<T> oBy = query.orderBy();
             for (String item : items) {
                 if (item.startsWith("-")) {
+                    requireKnownProperty(item.substring(1));
                     oBy.desc(item.substring(1));
                 } else {
+                    requireKnownProperty(item);
                     oBy.asc(item);
                 }
             }

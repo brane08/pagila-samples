@@ -70,8 +70,9 @@ async def get_session_history(agent_app, thread_id: str) -> SessionHistory | Non
 async def delete_session(pool: asyncpg.Pool, thread_id: str) -> bool:
     """Delete all checkpoints for a session. Returns False if the session did not exist."""
     async with pool.acquire() as conn:
-        await conn.execute("DELETE FROM checkpoint_writes WHERE thread_id = $1", thread_id)
-        await conn.execute("DELETE FROM checkpoint_blobs  WHERE thread_id = $1", thread_id)
-        result = await conn.execute("DELETE FROM checkpoints WHERE thread_id = $1", thread_id)
+        async with conn.transaction():
+            await conn.execute("DELETE FROM checkpoint_writes WHERE thread_id = $1", thread_id)
+            await conn.execute("DELETE FROM checkpoint_blobs  WHERE thread_id = $1", thread_id)
+            result = await conn.execute("DELETE FROM checkpoints WHERE thread_id = $1", thread_id)
     # asyncpg returns "DELETE N" — extract row count
     return int(result.split()[-1]) > 0
