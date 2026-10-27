@@ -6,7 +6,7 @@ from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.engine import URL
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from store_tables import (
+from pagila_tables import (
     address,
     category as category_t,
     city,

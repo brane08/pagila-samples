@@ -1,10 +1,11 @@
-"""SQLAlchemy Core table metadata for the tables store_server.py queries.
+"""SQLAlchemy Core table metadata for the tables store_server.py, film_server.py,
+and analytics_server.py query.
 
-Plain Table declarations (not reflected, not ORM-mapped) — store_server's
-tools are functional read queries, not domain CRUD, so Core's expression
-language is enough without an ORM mapping layer.
+Plain Table declarations (not reflected, not ORM-mapped) — these MCP tools are
+functional read queries, not domain CRUD, so Core's expression language is enough
+without an ORM mapping layer.
 """
-from sqlalchemy import Column, DateTime, Integer, MetaData, Numeric, String, Table
+from sqlalchemy import Column, DateTime, Integer, MetaData, Numeric, String, Table, Text
 
 metadata = MetaData()
 
@@ -40,13 +41,28 @@ city = Table(
     Column("city", String),
 )
 
+language = Table(
+    "language",
+    metadata,
+    Column("language_id", Integer, primary_key=True),
+    Column("name", String),
+)
+
+# `rating` is declared String though the Postgres column type is the `mpaa_rating`
+# enum — asyncpg returns it as a plain str, so no explicit cast/codec is needed here.
 film = Table(
     "film",
     metadata,
     Column("film_id", Integer, primary_key=True),
     Column("title", String),
-    Column("rating", String),
+    Column("description", Text),
+    Column("release_year", Integer),
+    Column("language_id", Integer),
+    Column("rental_duration", Integer),
     Column("rental_rate", Numeric),
+    Column("length", Integer),
+    Column("replacement_cost", Numeric),
+    Column("rating", String),
 )
 
 category = Table(
@@ -61,6 +77,21 @@ film_category = Table(
     metadata,
     Column("film_id", Integer, primary_key=True),
     Column("category_id", Integer, primary_key=True),
+)
+
+actor = Table(
+    "actor",
+    metadata,
+    Column("actor_id", Integer, primary_key=True),
+    Column("first_name", String),
+    Column("last_name", String),
+)
+
+film_actor = Table(
+    "film_actor",
+    metadata,
+    Column("film_id", Integer, primary_key=True),
+    Column("actor_id", Integer, primary_key=True),
 )
 
 inventory = Table(
