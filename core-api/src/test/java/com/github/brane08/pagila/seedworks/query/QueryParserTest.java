@@ -37,6 +37,46 @@ class QueryParserTest {
         }
     }
 
+    @Test
+    void parseNumberAcceptsWholeNumbersOnly() {
+        assertEquals(60, QueryParser.parseNumber("length", " 60 ").intValue());
+        assertEquals(2.5, QueryParser.parseNumber("rate", "2.5").doubleValue());
+        assertThrows(InvalidQueryException.class, () -> QueryParser.parseNumber("length", "5abc"));
+        assertThrows(InvalidQueryException.class, () -> QueryParser.parseNumber("length", ""));
+        assertThrows(InvalidQueryException.class, () -> QueryParser.parseNumber("length", null));
+    }
+
+    enum Color { RED }
+
+    @Test
+    void coerceConvertsToTargetType() {
+        assertEquals("x", QueryParser.coerce("f", null, "x"));
+        assertEquals("x", QueryParser.coerce("f", String.class, "x"));
+        assertEquals(7, QueryParser.coerce("f", Integer.class, "7"));
+        assertEquals(7L, QueryParser.coerce("f", long.class, "7"));
+        assertEquals((short) 7, QueryParser.coerce("f", Short.class, "7"));
+        assertEquals(1.5d, QueryParser.coerce("f", Double.class, "1.5"));
+        assertEquals(1.5f, QueryParser.coerce("f", Float.class, "1.5"));
+        assertEquals(new java.math.BigDecimal("4.99"), QueryParser.coerce("f", java.math.BigDecimal.class, "4.99"));
+        assertEquals(Boolean.TRUE, QueryParser.coerce("f", Boolean.class, "TRUE"));
+        assertEquals(Boolean.FALSE, QueryParser.coerce("f", boolean.class, "false"));
+        assertEquals(Color.RED, QueryParser.coerce("f", Color.class, "RED"));
+        assertEquals(java.time.LocalDate.of(2024, 1, 2), QueryParser.coerce("f", java.time.LocalDate.class, "2024-01-02"));
+        assertEquals(java.time.LocalDateTime.of(2024, 1, 2, 3, 4),
+                QueryParser.coerce("f", java.time.LocalDateTime.class, "2024-01-02T03:04"));
+        assertEquals(java.time.OffsetDateTime.parse("2024-01-02T03:04:00Z"),
+                QueryParser.coerce("f", java.time.OffsetDateTime.class, "2024-01-02T03:04:00Z"));
+        assertEquals("raw", QueryParser.coerce("f", java.util.UUID.class, "raw"));
+    }
+
+    @Test
+    void coerceRejectsInvalidValues() {
+        assertThrows(InvalidQueryException.class, () -> QueryParser.coerce("f", Integer.class, "abc"));
+        assertThrows(InvalidQueryException.class, () -> QueryParser.coerce("f", Boolean.class, "maybe"));
+        assertThrows(InvalidQueryException.class, () -> QueryParser.coerce("f", Color.class, "BLUE"));
+        assertThrows(InvalidQueryException.class, () -> QueryParser.coerce("f", java.time.LocalDate.class, "nope"));
+    }
+
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {"   ", "\t"})

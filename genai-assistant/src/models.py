@@ -2,13 +2,15 @@ from typing import Annotated, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph import add_messages
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
 
 
 class ChatRequest(BaseModel):
-    message: str
-    thread_id: str = "default"
-    user_id: str = "anonymous"
+    message: str = Field(min_length=1, max_length=4000)
+    thread_id: str = Field(default="default", pattern=_ID_PATTERN)
+    user_id: str = Field(default="anonymous", pattern=_ID_PATTERN)
 
 
 class ChatResponse(BaseModel):
