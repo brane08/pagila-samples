@@ -15,8 +15,9 @@ Multi-module educational project demonstrating the same DVD rental business doma
 - **database**: PostgreSQL schema patches (`./database/schema.sql`)
 - **data-ebean**: Ebean ORM entities (Java 25)
 - **data-hibernate**: Hibernate JPA entities (Java 25)
+- **data-loader**: Standalone Java CLI (Ebean + HikariCP) that additively expands a table (e.g. `actor`) in `sakila`, plus slow-query demos (N+1, missing index); no tests yet (TS-005)
 - **quarkus-htmx**: Quarkus 3 consolidated app, port 8001: JSON `/rest/*` + HTMX/Qute `/ui/*`; Hibernate default, Ebean via manual switch
-- **go-web**: Go REST API (minimal stdlib)
+- **go-web**: Go REST API (minimal stdlib); no tests or docs yet (TS-006)
 - **ui-angular**: Angular 21 film browser SPA (port 4200); toolbar button opens the genai-assistant HTMX UI
 - **genai-assistant**: Python FastAPI + LangGraph + MCP agent (port 8000)
 

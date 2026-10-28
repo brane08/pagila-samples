@@ -501,6 +501,29 @@ class TestSessions:
         assert resp.json()["deleted"] is True
         assert resp.json()["thread_id"] == "existing-thread"
 
+    async def test_delete_refused_while_run_in_flight(self, client):
+        import asyncio
+        import main as m
+
+        lock = asyncio.Lock()
+        await lock.acquire()
+        m._thread_locks["busy2"] = lock
+        try:
+            with patch("main.delete_session", AsyncMock(return_value=True)) as deleter:
+                resp = await client.delete("/sessions/busy2")
+            assert resp.status_code == 409
+            deleter.assert_not_called()
+        finally:
+            m._thread_locks.pop("busy2", None)
+
+    async def test_busy_probe_does_not_create_lock_entries(self, client):
+        import main as m
+
+        m._thread_locks.clear()
+        with patch("main.delete_session", AsyncMock(return_value=False)):
+            await client.delete("/sessions/probe1")
+        assert "probe1" not in m._thread_locks
+
     async def test_get_unknown_session_returns_404(self, client):
         with patch("main.get_session_history", AsyncMock(return_value=None)):
             resp = await client.get("/sessions/no-such-thread")
@@ -664,7 +687,7 @@ class TestValidationNode:
         state = {"messages": [HumanMessage(content="Do you have Titanic?")], "summary": ""}
         result = await agent.validate_input(state)
 
-        assert result == {}
+        assert result == {"tool_retry_count": 0, "reflection_retry_count": 0}
         mock_classifier.ainvoke.assert_called_once()
         call_args = mock_classifier.ainvoke.call_args[0][0]
         assert any(isinstance(m, SystemMessage) and "topic classifier" in m.content for m in call_args)
@@ -688,8 +711,48 @@ class TestValidationNode:
             ],
             "summary": "",
         }
-        assert await agent.validate_input(state) == {}
+        assert "messages" not in await agent.validate_input(state)
         mock_classifier.ainvoke.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_validate_input_short_message_after_refusal_is_still_checked(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import AIMessage, HumanMessage
+        import agent
+
+        mock_classifier = MagicMock()
+        mock_classifier.ainvoke = AsyncMock(return_value=agent.TopicCheck(relevant=False))
+        monkeypatch.setattr(agent, "classifier", mock_classifier)
+
+        state = {
+            "messages": [
+                HumanMessage(content="weather?"),
+                AIMessage(content=agent.REFUSAL_MESSAGE),
+                HumanMessage(content="and tomorrow?"),
+            ],
+            "summary": "",
+        }
+        result = await agent.validate_input(state)
+        mock_classifier.ainvoke.assert_called_once()
+        assert result["messages"][0].content == agent.REFUSAL_MESSAGE
+
+    @pytest.mark.asyncio
+    async def test_validate_input_resets_retry_counters_each_turn(self, monkeypatch):
+        from unittest.mock import AsyncMock, MagicMock
+        from langchain_core.messages import HumanMessage
+        import agent
+
+        mock_classifier = MagicMock()
+        mock_classifier.ainvoke = AsyncMock(return_value=agent.TopicCheck(relevant=True))
+        monkeypatch.setattr(agent, "classifier", mock_classifier)
+
+        state = {
+            "messages": [HumanMessage(content="Do you have Titanic?")],
+            "summary": "", "tool_retry_count": 1, "reflection_retry_count": 1,
+        }
+        result = await agent.validate_input(state)
+        assert result["tool_retry_count"] == 0
+        assert result["reflection_retry_count"] == 0
 
     @pytest.mark.asyncio
     async def test_validate_input_classifier_failure_fails_open(self, monkeypatch):
@@ -702,7 +765,7 @@ class TestValidationNode:
         monkeypatch.setattr(agent, "classifier", mock_classifier)
 
         state = {"messages": [HumanMessage(content="Do you have any films starring Tom Hanks?")], "summary": ""}
-        assert await agent.validate_input(state) == {}
+        assert "messages" not in await agent.validate_input(state)
 
     @pytest.mark.asyncio
     async def test_validate_input_off_topic(self, monkeypatch):

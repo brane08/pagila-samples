@@ -144,12 +144,22 @@ java -cp "data-loader/target/data-loader-1.0.jar:data-loader/target/lib/*" com.g
 FastAPI app (`localhost:8000`) backed by a LangGraph ReAct agent.
 
 ```
-POST /chat           → blocking invoke
-POST /chat/stream    → SSE stream (token / tool_start / tool_end / done events)
-GET  /sessions       → list all persisted conversation threads
-GET  /sessions/{id}  → full message history
-DELETE /sessions/{id}
+POST /chat                          → blocking invoke (auto-rejects tool calls, then 409)
+POST /chat/stream                   → SSE stream (token / reset / tool_start / tool_end / tool_confirm / done / error)
+GET  /chat/pending/{id}             → tool calls awaiting approval + confirm_id (UI restores the card on reload)
+POST /chat/confirm/{id}/stream      → approve/reject the pending calls; body {approved, confirm_id}
+POST /admin/reindex (202) · GET /admin/reindex   → rebuild film embeddings / poll status
+GET  /sessions · GET /sessions/{id} · DELETE /sessions/{id}
 ```
+
+**Tool approval:** every tool call pauses at `human_review` (LangGraph `interrupt()`). The approval is bound to
+a `confirm_id` (hash of the proposed calls); a stale or duplicate confirm gets 409 / SSE `stale_confirm`. Runs are
+detached from the HTTP response so a disconnect cannot cancel a resume mid-tool. Thread locks are in-process, so
+the app must run as a **single worker** (it refuses to start with `WEB_CONCURRENCY>1`). `AUTO_APPROVE_TOOLS`
+(comma list, default empty) skips the prompt only when every call in the batch is listed. See DC-005.
+
+`build_agent` wires the MCP client and Postgres checkpointer; `build_graph(tools, checkpointer, chat_model=…)`
+compiles the graph and is what the integration tests use (scripted model + `InMemorySaver`).
 
 **MCP servers** (`film_server.py`, `store_server.py`) are spawned as child processes over
 stdio at startup. Each has its own asyncpg pool. The backend serves its own HTMX chat and
@@ -163,8 +173,11 @@ analytics UI at `http://localhost:8000/ui`. The Angular toolbar button (smart_to
 **RAG**: `BAAI/bge-small-en-v1.5` via `FastEmbedEmbeddings` (ONNX, local, no API key, no torch) + pgvector.
 Collection name: `film_descriptions`. Seed with `cd genai-assistant && .venv/bin/python src/rag.py`.
 
-**Config via `.env`**: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`,
+**Config via `.env`**: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` (default `password`),
 `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`, `OPENROUTER_MODEL`.
+Server: `HOST` (default `127.0.0.1`), `CORS_ORIGINS` (comma list, localhost defaults), `WEB_CONCURRENCY` (must be 1),
+`AUTO_APPROVE_TOOLS` (default empty), `RUN_TIMEOUT_S` (default 300, cap on one streamed run). `agent.py` builds `ChatOpenAI` at import, so any value of `OPENROUTER_API_KEY`
+must be set to import it (tests set a dummy).
 
 ---
 
@@ -208,7 +221,7 @@ calls are intercepted with `page.route()` mocks.
 # Start the dev server (keep running in a separate terminal)
 cd ui-angular && ng serve
 
-# Run all e2e tests (~95 tests)
+# Run all e2e tests (77 tests)
 cd ui-angular && npx playwright test
 
 # Run a single spec file
@@ -264,9 +277,15 @@ cd genai-assistant && uv run pytest tests/test_api.py::TestChatStream -v
 
 | File | Coverage | DB needed? |
 |---|---|---|
-| `test_api.py` | `/health`, `/admin/reindex`, `/chat`, `/chat/stream`, `/chat/confirm`, `/sessions` CRUD | No |
+| `test_api.py` | endpoints, SSE, confirm/pending/409 flow, graph nodes (validate, clarify, reflect, ground, prefs, tool errors), UI routes | No |
+| `test_agent_graph.py` | real compiled graph, scripted chat model + `InMemorySaver`: approve, reject, auto-approve, fail-open, reflection, history | No |
+| `test_agent_resilience.py` | classifier fail-open, dangling tool_calls repair, sessions schema queries | No |
+| `test_ui_render.py` | markdown/table rendering and escaping (mistune) | No |
+| `test_query_utils.py`, `test_film_server_helpers.py` | LIKE escaping, limit clamp, `store_id` SQL, cached vector store | No |
+| `test_analytics_queries.py` | analytics SQL helpers (mocked pool) | No |
 | `test_film_tools.py` | MCP film tools (search, details, availability, actors) | Yes |
 | `test_store_tools.py` | MCP store tools (inventory, customers, revenue) | Yes |
+| `test_analytics_tools.py` | MCP analytics tools | Yes |
 | `test_actor_tools.py` | MCP actor tools | Yes |
 | `test_rental_tools.py` | MCP rental tools | Yes |
 | `test_mcp.py` | MCP server startup / tool registration | Yes |
@@ -285,4 +304,5 @@ All originally planned features are complete:
 6. **Angular unit tests** ✅ — Karma/Jasmine specs for actors/stores/customers/films services and card components
 7. **Customer detail card** ✅ — `GET /rest/rentals/@customers/{id}` + Angular card component
 
-**Next options:** enable deferred quarkus-htmx REST tests.
+**Next options:** see `.claude/memory/tracking/todo.md` (open: quarkus-htmx `-Pintegration` REST tests TS-002,
+Playwright rerun TS-004, data-loader/go-web tests TS-005/006, local DB schema apply BG-034, Angular 22 FE-001).

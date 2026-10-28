@@ -4,13 +4,13 @@ Counts per state and last-updated date per item file. No items here. Findings in
 
 | File | DOING | BLOCKED | PARTIAL | PENDING | BACKLOG | DEFERRED | DONE | Last updated |
 |---|---|---|---|---|---|---|---|---|
-| items/design.md | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2026-10-26 |
-| items/feature.md | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2026-10-26 |
-| items/bugs.md | 0 | 0 | 0 | 0 | 0 | 1 | 30 | 2026-10-28 |
-| items/tests.md | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 2026-10-26 |
-| items/archive.md | - | - | - | - | - | - | 15 | 2026-10-26 |
+| items/design.md | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 2026-10-28 |
+| items/feature.md | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 2026-10-28 |
+| items/bugs.md | 0 | 0 | 3 | 0 | 2 | 1 | 25 | 2026-10-28 |
+| items/tests.md | 0 | 0 | 0 | 0 | 4 | 0 | 2 | 2026-10-28 |
+| items/archive.md | - | - | - | - | - | - | 26 | 2026-10-28 |
 
-Other logs: `decisions.md` (DC-001..002), `review.md` (RV-001..002).
+Other logs: `decisions.md` (DC-001..005), `review.md` (RV-001..007).
 
 ## Tracking pattern
 Source: `~/.claude/memory/patterns/tracking-pattern.md`. Rules in force here:

@@ -24,9 +24,20 @@ _DB = dict(
 )
 
 
+# Only these modules talk to Postgres; every other suite runs without a database or the embedding model.
+_DB_MODULES = {
+    "test_film_tools", "test_store_tools", "test_analytics_tools",
+    "test_actor_tools", "test_rental_tools", "test_mcp",
+}
+
+
 @pytest_asyncio.fixture(autouse=True)
-async def inject_pool():
-    """Create a connection pool/engine on this test's event loop and inject into all MCP servers."""
+async def inject_pool(request):
+    """For DB-backed modules: create a pool/engine on this test's event loop and inject into the MCP servers."""
+    if request.module.__name__.rsplit(".", 1)[-1] not in _DB_MODULES:
+        yield
+        return
+
     import analytics_server
     import film_server
     import store_server
