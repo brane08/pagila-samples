@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from analytics_queries import rental_stats_by_category as _rental_stats_by_category
 from pagila_tables import actor, category as category_t, customer, film, film_actor, film_category, inventory, language, rental, store
+from query_utils import LIKE_ESCAPE, MAX_LIMIT, clamp, like  # noqa: F401  (MAX_LIMIT re-exported)
 from rag import semantic_search
 
 load_dotenv()
@@ -52,17 +53,9 @@ async def _get_engine() -> AsyncEngine:
     return _engine
 
 
-MAX_LIMIT = 100
-_LIKE_ESCAPE = "\\"
-
-
-def _clamp(limit: int) -> int:
-    return max(1, min(int(limit), MAX_LIMIT))
-
-
-def _like(value: str) -> str:
-    """Escape LIKE wildcards so user text matches literally; pair with escape=_LIKE_ESCAPE."""
-    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+_LIKE_ESCAPE = LIKE_ESCAPE
+_clamp = clamp
+_like = like
 
 
 # ── Tools ──────────────────────────────────────────────────────────────────────
@@ -254,7 +247,7 @@ async def semantic_film_search(query: str, limit: int = 5) -> list[dict]:
     rather than an exact title — e.g. 'a film about redemption in space'
     or 'something funny with a road trip'.
     """
-    return await semantic_search(query, k=limit)
+    return await semantic_search(query, k=_clamp(limit))
 
 
 # ── Actor tools ────────────────────────────────────────────────────────────────

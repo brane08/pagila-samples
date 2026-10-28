@@ -4,6 +4,7 @@ import asyncpg
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
+from query_utils import clamp as _clamp
 from analytics_queries import (
     overdue_rentals as _overdue_rentals,
     revenue_summary as _revenue_summary,
@@ -41,10 +42,7 @@ async def get_overdue_rentals(store_id: int | None = None, limit: int = 20) -> l
     Optionally filter by store_id. Ordered most overdue first.
     """
     pool = await _get_pool()
-    rows = await _overdue_rentals(pool, limit=limit)
-    if store_id is not None:
-        rows = [r for r in rows if r["store_id"] == store_id]
-    return rows
+    return await _overdue_rentals(pool, limit=_clamp(limit), store_id=store_id)
 
 
 @mcp.tool()
@@ -57,10 +55,7 @@ async def get_slow_moving_films(store_id: int | None = None, days: int = 90, lim
     Optionally filter by store_id.
     """
     pool = await _get_pool()
-    rows = await _slow_moving_films(pool, days=days, limit=limit)
-    if store_id is not None:
-        rows = [r for r in rows if r["store_id"] == store_id]
-    return rows
+    return await _slow_moving_films(pool, days=max(days, 0), limit=_clamp(limit), store_id=store_id)
 
 
 @mcp.tool()
