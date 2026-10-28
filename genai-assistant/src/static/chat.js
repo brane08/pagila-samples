@@ -171,7 +171,9 @@ async function readStream(response, contentEl) {
     try { detail = (await response.json()).detail; } catch { /* non-JSON error body */ }
     if (detail && Array.isArray(detail.tool_calls)) {
       renderToolConfirm({ tool_calls: detail.tool_calls, confirm_id: detail.confirm_id });
-      throw new Error("A tool call is awaiting your confirmation");
+      const pendingErr = new Error("A tool call is awaiting your confirmation");
+      pendingErr.pending = true; // the card is shown and owns the input state
+      throw pendingErr;
     }
     const message = typeof detail === "string" ? detail : detail?.message;
     throw new Error(message ?? `Request failed (HTTP ${response.status})`);
@@ -238,6 +240,8 @@ async function readStream(response, contentEl) {
   if (!finished) {
     hideTyping();
     setInputEnabled(true);
+    // The run may have paused for approval before the connection dropped: show the real state.
+    restorePendingCard();
   }
 }
 
@@ -267,7 +271,7 @@ async function sendMessage() {
   } catch (err) {
     hideTyping();
     aiContentEl.textContent = "Error: " + err.message;
-    setInputEnabled(true);
+    if (!err.pending) setInputEnabled(true);
   }
 }
 

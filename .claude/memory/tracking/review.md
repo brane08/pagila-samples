@@ -30,3 +30,15 @@
 - Verified OK: no path to tools except via human_review; reject defaults on missing `approved`; args shown = args executed; card uses textContent (no XSS); pending interrupts survive restart.
 - Not checked: nothing executed (code reading only); multi-worker behaviour is by inspection.
 - Findings produced: BG-029, BG-030.
+
+## RV-006 — Project status and tracking-gap audit, 2026-10-28
+- Scope: 1 read-only sonnet subagent over CLAUDE.md, memory notes, tracking and every module in the module map, on review-rv004.
+- Outcome: no new code defects; 6 doc/tracking findings fixed (BG-031/032/033/035, DS-001, TS-003), and open work logged as BG-034, BG-036, TS-002, TS-004..006, FE-001. DC-005 records the approval design.
+- Not checked: nothing was executed (counts are from grep and docs); the post-fix code was reviewed separately in RV-007.
+- Findings produced: BG-031..036, DS-001, TS-002..006, FE-001.
+
+## RV-007 — Opus final review of genai-assistant post-fix code, 2026-10-28
+- Scope: 1 read-only opus subagent on the merged PR #26 code (main.py detached runs/locks, agent.py nodes, chat.js, ui_routes, servers, rag, tests). Opus used because the user asked for it.
+- Outcome: 20 findings (0 high, 6 med, 14 low), bundled as BG-037..041. BG-037/038 fixed and BG-039..041 partly fixed the same day (OR-301..306, 308..311, 313 done). Verified OK: SSE payloads via json.dumps, bounded regexes, generic error text, atomic lock+task start, escaping, query_utils, store_id in SQL.
+- Not checked: nothing run; venv unreadable, so langchain-mcp-adapters behaviour (per-call stdio sessions, `aclose`) is unverified; ui-angular, Java modules, database SQL, test_film_server_helpers/test_ui_render/test_query_utils, DB-backed tool tests, analytics.html, pagila_tables.
+- Findings produced: BG-037..041.

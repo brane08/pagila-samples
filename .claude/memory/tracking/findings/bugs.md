@@ -96,7 +96,7 @@ Status: FIXED 2026-10-28
 
 ## BG-024
 (RV-004 OR-001, high) Only `validate_input` fails open. clarify/reflect/ground/summarize classifier calls are unguarded, and a failure or client disconnect after the model emitted tool_calls leaves AIMessage.tool_calls with no ToolMessages and no pending interrupt, so the next turn is accepted and every provider call 400s (BG-014 failure mode via another path).
-Status: FIXED 2026-10-28 (real-graph integration test still open)
+Status: FIXED 2026-10-28 (real-graph integration test added: tests/test_agent_graph.py)
 
 ## BG-025
 (RV-004 OR-004/010/011/016, med) Interrupt UX and concurrency: confirm card is memory-only so reload/stream error leaves the thread at 409 forever; same-thread runs are not serialized (check-then-act race, double confirm runs tools twice); confirm card shows only tool_calls[0] but approval covers all; blocking `/chat` leaves the thread paused after its 409.
@@ -121,3 +121,47 @@ Status: FIXED 2026-10-28
 ## BG-030
 (RV-005 OR-105/108/109/110/111/112/114, low-med) approval prompt UX and design: every tool gated with no read-only/mutating split and no per-call subset approval; no auth binding user↔thread (shared "default" thread); empty/non-dict interrupt renders a live Approve on `{}`; args box capped at 90px hides payload tail; card text does not say what approve/reject do; unused drifted partials/tool_confirm.html; history shows tool_calls without result after a cancelled run; clarify_tool_args false positive can hide the proposed call.
 Status: FIXED 2026-10-28 (allowlist, partial removed; rest done in BG-029 or won't fix, see item)
+
+## BG-031
+(RV-006 status audit, med) CLAUDE.md drift: says ~95 e2e tests (77), genai test table and endpoint list miss newer files and routes, .env list omits HOST/CORS_ORIGINS/AUTO_APPROVE_TOOLS/WEB_CONCURRENCY, no mention of confirm_id/build_graph/single-worker rule, "Next options" partly done; genai_assistant_next_steps.md has stale counts (31/20/91) and done items listed as next.
+Status: FIXED 2026-10-28
+
+## BG-032
+(RV-006, med) Repo-root MEMORY.md is stale and outside the memory index (Angular chat, ngx-markdown, MiniLM, 66 e2e, finished "pending work"); memory index line for next steps is stale.
+Status: FIXED 2026-10-28
+
+## BG-033
+(RV-006, low) genai_assistant_architecture.md: cwd-relative paths (anchored to __file__ since BG-011), graph omits clarify/reflect/ground, no analytics server/query_utils/pagila_tables; project_overview.md omits data-loader.
+Status: FIXED 2026-10-28
+
+## BG-034
+(RV-006, low) database/schema.sql changes (language ALTER in a DO block, user_preferences store FK NOT VALID) are not applied to the local DB; there is no migration tool, so nothing verifies them.
+Status: OPEN
+
+## BG-035
+(RV-006, low) Tracking drift: BG-024 text said the integration test was open, todo.md "Other logs" ranges stale (RV-001..002, DC-001..002), decisions out of order, bugs DONE past the archive threshold.
+Status: FIXED 2026-10-28
+
+## BG-036
+(RV-006, low) Skips recorded only in item text: film.rating cast, `;` in filter values, user_preferences owner/migration (BG-021); RV-004 OR-006/OR-012 (provider message-ordering strictness, plausible only, never verified) have no disposition.
+Status: OPEN
+
+## BG-037
+(RV-007 OR-301/304/308/310/313, med) Async lifecycle after the BG-029 redesign: shutdown does not cancel/await detached `_run_tasks` or `_reindex_task` before closing the MCP client and pools (an in-flight resume can fail mid-tool and the approval returns); `/admin/reindex` still imports `rag` (FastEmbed load) and builds PGVector on the event loop; a detached run has no overall timeout and holds the thread lock (409s until restart); `_thread_lock` entries created on 409 paths are never evicted (unauthenticated growth via random ids); the single-worker guard only reads `WEB_CONCURRENCY`, not `--workers`.
+Status: FIXED 2026-10-28 (shutdown drains runs 10s then cancels, reindex import/store build in threads, `RUN_TIMEOUT_S` run cap, `_is_busy` probes without creating locks, guard also reads `UVICORN_WORKERS`)
+
+## BG-038
+(RV-007 OR-302/303/309, med) Agent logic: the `_is_question` guard is defeated by the refusal text itself (it ends with "?"), so the next short off-topic message skips the classifier; `tool_retry_count`/`reflection_retry_count` persist across turns (an error in one turn makes the next turn's first tool error give up immediately); streamed SSE drops final messages that were not token-streamed (give-up text, clarify question replacing a preamble) and non-str streamed content never triggers `reset`.
+Status: FIXED 2026-10-28 (REFUSAL_MESSAGE excluded from `_is_question`, validate_input clears both retry counters each turn, mismatching final message streams reset+full text)
+
+## BG-039
+(RV-007 OR-305/314/315, med) Test quality: conftest autouse fixture connects asyncpg and imports film_server/rag (FastEmbed) for every test, so the "no DB" suites need a live Postgres and the model cache; several tests are vacuous (stream-reset warning path with empty final state, save_prefs invalid-email test, an `or sorted(...)` assertion); endpoint tests use a MagicMock agent so confirm/_resume_command with real Interrupt ids, the auto-reject loop, give-up routing, clarify→END, `_repair_dangling` across a cancelled turn, the `_is_question` bypass and cross-turn counters are never run against a compiled graph.
+Status: PARTIAL 2026-10-28. Done: OR-305 (conftest DB setup only for the 6 DB-backed modules), unit tests for refusal bypass, counter reset, delete 409, lock probe. Left: OR-314 vacuous tests, OR-315 real-graph coverage.
+
+## BG-040
+(RV-007 OR-306/307/311/316, low-med) Guards still soft: JSON `DELETE /sessions/{id}` has no in-flight guard and the UI delete guard is check-then-act; `confirm_id` is optional so a client without it approves whatever is pending; chat.js re-enables the input after a 409-with-card or a silently closed stream (and does not restore the card); `/chat` checks pending outside the lock, drops the model's answer after a successful auto-reject, and `tool_calls_made` spans the whole thread.
+Status: PARTIAL 2026-10-28. Done: OR-306 (JSON DELETE returns 409 while a run holds the thread), OR-311 (input stays disabled with the card after a 409; a silently closed stream restores the card). Left: OR-307 optional confirm_id, OR-316 /chat lock re-check and answer drop.
+
+## BG-041
+(RV-007 OR-312/317/318/319/320, low) Misc: MCP tools may spawn a new stdio subprocess per call (adapter 0.2, unverified) and `mcp_client.aclose()` may not exist; MCP server commands are cwd-relative (`src/*_server.py`); table-token swap-back can splice markup into an attribute (`[x](PAGILATABLETOKEN0)`, layout only) and http(s) links still allow click exfiltration; `db.py` does not URL-quote credentials (rag.py does); dead code (`_has_pending_interrupt`, `get_psycopg_pool`, `_reindex_task`, conftest `analytics_server._engine`) and CLAUDE.md says two MCP servers each with its own pool.
+Status: PARTIAL 2026-10-28. Done: `_has_pending_interrupt` removed. Left: OR-312 MCP per-call subprocess (needs venv check), OR-317, OR-318, OR-319, remaining dead code, CLAUDE.md MCP wording.

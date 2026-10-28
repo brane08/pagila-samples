@@ -33,17 +33,33 @@ _reindex_task: asyncio.Task | None = None
 _thread_locks: dict[str, asyncio.Lock] = {}
 _run_tasks: set[asyncio.Task] = set()
 logger = logging.getLogger(__name__)
+RUN_TIMEOUT_S = float(os.environ.get("RUN_TIMEOUT_S", "300"))
+SHUTDOWN_GRACE_S = 10.0
 ThreadId = Annotated[str, PathParam(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
 
 
 def _require_single_worker() -> None:
     """Thread locks and the approval re-checks live in this process; several workers would silently bypass them."""
-    workers = os.environ.get("WEB_CONCURRENCY", "1")
-    if workers.isdigit() and int(workers) > 1:
-        raise RuntimeError(
-            f"WEB_CONCURRENCY={workers}: genai-assistant keeps per-thread locks in process memory and must run "
-            "as a single worker."
-        )
+    for var in ("WEB_CONCURRENCY", "UVICORN_WORKERS"):
+        workers = os.environ.get(var, "1")
+        if workers.isdigit() and int(workers) > 1:
+            raise RuntimeError(
+                f"{var}={workers}: genai-assistant keeps per-thread locks in process memory and must run "
+                "as a single worker."
+            )
+
+
+async def _drain_background_tasks() -> None:
+    """Let in-flight runs finish (a resumed tool must not be cut off), then cancel stragglers before pools close."""
+    runs = list(_run_tasks)
+    if runs:
+        _, pending = await asyncio.wait(runs, timeout=SHUTDOWN_GRACE_S)
+        for task in pending:
+            task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
+    if _reindex_task is not None and not _reindex_task.done():
+        _reindex_task.cancel()
+        await asyncio.gather(_reindex_task, return_exceptions=True)
 
 
 @asynccontextmanager
@@ -58,6 +74,7 @@ async def lifespan(app: FastAPI):
     print("Agent ready.")
     yield
     print("Shutting down...")
+    await _drain_background_tasks()
     if mcp_client:
         await mcp_client.aclose()
     await close_pools()
@@ -111,11 +128,6 @@ def _config(thread_id: str) -> dict:
     return {"configurable": {"thread_id": thread_id}, "recursion_limit": RECURSION_LIMIT}
 
 
-async def _has_pending_interrupt(config: dict) -> bool:
-    state = await agent_app.aget_state(config)
-    return any(task.interrupts for task in state.tasks)
-
-
 def _confirm_id(tool_calls: list) -> str:
     """Stable id of one pending approval, derived from the proposed calls; ties a confirm to the card the user saw."""
     basis = [[tc.get("id"), tc.get("name"), tc.get("args")] for tc in tool_calls if isinstance(tc, dict)]
@@ -153,6 +165,12 @@ def _thread_lock(thread_id: str) -> asyncio.Lock:
     return _thread_locks.setdefault(thread_id, asyncio.Lock())
 
 
+def _is_busy(thread_id: str) -> bool:
+    """Whether a run holds the thread; does not create a lock entry, so probing random ids cannot grow the dict."""
+    lock = _thread_locks.get(thread_id)
+    return lock is not None and lock.locked()
+
+
 def _evict_lock(thread_id: str) -> None:
     lock = _thread_locks.get(thread_id)
     if lock is not None and not lock.locked():
@@ -166,7 +184,7 @@ def _pending_detail(message: str, pending: list) -> dict:
 async def _reject_if_pending_or_busy(config: dict) -> None:
     """409 when a run is in flight, or when a tool call awaits confirmation (with the calls, so the UI can show them)."""
     thread_id = config["configurable"]["thread_id"]
-    if _thread_lock(thread_id).locked():
+    if _is_busy(thread_id):
         raise HTTPException(status_code=409, detail={"message": "Another request is running on this thread"})
     pending = await _pending_tool_calls(config)
     if pending is not None:
@@ -253,8 +271,9 @@ async def _stream_agent_events(input_or_command, config: dict, confirm_id: str |
             elif not is_confirm and pending is not None:
                 await queue.put(f"data: {json.dumps({'type': 'error', 'message': 'A tool call is awaiting your confirmation.', 'code': 'pending'})}\n\n")
             else:
-                async for line in _stream_locked(input_or_command, config):
-                    await queue.put(line)
+                async with asyncio.timeout(RUN_TIMEOUT_S):  # a hung tool/model call must not hold the thread forever
+                    async for line in _stream_locked(input_or_command, config):
+                        await queue.put(line)
         except Exception:
             logger.exception("Agent run failed")
             await queue.put(f"data: {json.dumps({'type': 'error', 'message': 'The assistant hit an error. Please try again.'})}\n\n")
@@ -273,20 +292,26 @@ async def _stream_agent_events(input_or_command, config: dict, confirm_id: str |
 async def _stream_locked(input_or_command, config: dict) -> AsyncIterator[str]:
     agent_streamed_any = False
     streamed_text = ""
+    streamed_opaque = False  # non-str chunk content (content blocks) cannot be compared with the final text
     try:
         async for event in agent_app.astream_events(input_or_command, config=config, version="v2"):
             kind = event["event"]
             if kind == "on_chat_model_start":
                 # A new agent run (e.g. after a reflection retry or a tool round) replaces earlier draft text.
-                if event.get("metadata", {}).get("langgraph_node") == "agent" and streamed_text:
+                if event.get("metadata", {}).get("langgraph_node") == "agent" and agent_streamed_any:
                     streamed_text = ""
+                    streamed_opaque = False
+                    agent_streamed_any = False
                     yield 'data: {"type": "reset"}\n\n'
             elif kind == "on_chat_model_stream":
                 if event.get("metadata", {}).get("langgraph_node") == "agent":
                     chunk = event["data"]["chunk"]
                     if chunk.content:
                         agent_streamed_any = True
-                        streamed_text += chunk.content if isinstance(chunk.content, str) else ""
+                        if isinstance(chunk.content, str):
+                            streamed_text += chunk.content
+                        else:
+                            streamed_opaque = True
                         yield f"data: {json.dumps({'type': 'token', 'content': chunk.content})}\n\n"
             elif kind == "on_tool_start":
                 yield f"data: {json.dumps({'type': 'tool_start', 'tool': event['name'], 'input': event['data'].get('input')})}\n\n"
@@ -308,9 +333,15 @@ async def _stream_locked(input_or_command, config: dict) -> AsyncIterator[str]:
                 if isinstance(last, _AI) and not getattr(last, "tool_calls", None) and isinstance(last.content, str) and last.content:
                     if not agent_streamed_any:
                         yield f"data: {json.dumps({'type': 'token', 'content': last.content})}\n\n"
-                    elif last.content.startswith(streamed_text) and len(last.content) > len(streamed_text):
-                        # ground_answer appends a warning after the model finished streaming.
-                        yield f"data: {json.dumps({'type': 'token', 'content': last.content[len(streamed_text):]})}\n\n"
+                    elif not streamed_opaque and last.content.startswith(streamed_text):
+                        if len(last.content) > len(streamed_text):
+                            # ground_answer appends a warning after the model finished streaming.
+                            yield f"data: {json.dumps({'type': 'token', 'content': last.content[len(streamed_text):]})}\n\n"
+                    else:
+                        # The final message differs from what was streamed (give-up text, clarify question
+                        # replacing a tool-call draft): replace it instead of dropping it.
+                        yield 'data: {"type": "reset"}\n\n'
+                        yield f"data: {json.dumps({'type': 'token', 'content': last.content})}\n\n"
             yield 'data: {"type": "done"}\n\n'
     except Exception:
         logger.exception("Agent stream failed")
@@ -336,7 +367,7 @@ async def chat_confirm_stream(thread_id: ThreadId, body: ConfirmRequest):
     """Resume a paused agent run after user approves or rejects the pending tool call."""
     _require_agent()
     config = _config(thread_id)
-    if _thread_lock(thread_id).locked():
+    if _is_busy(thread_id):
         raise HTTPException(status_code=409, detail={"message": "Another request is running on this thread"})
     interrupts = await _pending_interrupts(config)
     if not interrupts:
@@ -358,9 +389,10 @@ async def chat_confirm_stream(thread_id: ThreadId, body: ConfirmRequest):
 
 async def _run_reindex() -> None:
     global _reindex_job
-    from rag import index_films
     try:
-        await index_films()
+        # Importing rag loads the embedding model (blocking); do it in a thread.
+        rag = await asyncio.to_thread(__import__, "rag")
+        await rag.index_films()
         _reindex_job = ReindexStatus(
             status="done",
             started_at=_reindex_job.started_at,
@@ -418,6 +450,8 @@ async def get_session(thread_id: ThreadId):
 @app.delete("/sessions/{thread_id}")
 async def remove_session(thread_id: ThreadId):
     """Delete a session and all its checkpointed state."""
+    if _is_busy(thread_id):
+        raise HTTPException(status_code=409, detail="A run is in progress on this thread")
     deleted = await delete_session(get_asyncpg_pool(), thread_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Session '{thread_id}' not found")

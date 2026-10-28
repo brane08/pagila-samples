@@ -382,8 +382,24 @@ async def summarize_history(state: AgentState) -> dict:
     return {"summary": response.content, "messages": deletes}
 
 
+REFUSAL_MESSAGE = (
+    "I'm a Sakila DVD rental assistant — I can only answer questions about "
+    "films, actors, rentals, store inventory, customers, and payments in the Sakila database. "
+    "Is there something about the rental data I can help you with?"
+)
+
+# Retry counters are per turn; validate_input runs first on every turn and clears them.
+_TURN_RESET = {"tool_retry_count": 0, "reflection_retry_count": 0}
+
+
 def _is_question(message) -> bool:
-    return isinstance(message, AIMessage) and isinstance(message.content, str) and "?" in message.content[-300:]
+    # The refusal text ends with "?" but is not a question a short reply could be answering.
+    return (
+        isinstance(message, AIMessage)
+        and isinstance(message.content, str)
+        and message.content != REFUSAL_MESSAGE
+        and "?" in message.content[-300:]
+    )
 
 
 async def validate_input(state: AgentState) -> dict:
@@ -395,7 +411,7 @@ async def validate_input(state: AgentState) -> dict:
     # Short replies ("yes", "store 2", an email) answering an assistant question are follow-ups; judged alone
     # they look off-topic. A short message after a finished answer is still checked.
     if len(messages) > 1 and len(text) <= SHORT_REPLY_CHARS and _is_question(messages[-2]):
-        return {}
+        return dict(_TURN_RESET)
     try:
         result: TopicCheck = await classifier.ainvoke([
             SystemMessage(content=VALIDATION_PROMPT),
@@ -403,14 +419,10 @@ async def validate_input(state: AgentState) -> dict:
         ])
     except Exception:
         logger.exception("Topic classifier failed; allowing message")
-        return {}
+        return dict(_TURN_RESET)
     if not result.relevant:
-        return {"messages": [AIMessage(content=(
-            "I'm a Sakila DVD rental assistant — I can only answer questions about "
-            "films, actors, rentals, store inventory, customers, and payments in the Sakila database. "
-            "Is there something about the rental data I can help you with?"
-        ))]}
-    return {}
+        return {**_TURN_RESET, "messages": [AIMessage(content=REFUSAL_MESSAGE)]}
+    return dict(_TURN_RESET)
 
 
 async def clarify_tool_args(state: AgentState) -> dict:
