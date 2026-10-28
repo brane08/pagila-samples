@@ -5,9 +5,10 @@ import re
 import sys
 import uuid
 from pathlib import Path
+from typing import Annotated
 
 import mistune
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Path as PathParam, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -36,9 +37,16 @@ _KNOWN_TYPES = {
 _JSON_BLOCK_RE = re.compile(r"```json\n(\{.*?\})\n```", re.DOTALL)
 _TABLE_TOKEN = "PAGILATABLETOKEN"
 _THREAD_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+ThreadId = Annotated[str, PathParam(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
 
 
-_markdown = mistune.create_markdown(escape=True)
+class _SafeRenderer(mistune.HTMLRenderer):
+    def image(self, text, url, title=None):
+        # Remote images auto-load and can leak data through the URL: show the alt text only.
+        return html.escape(text or "")
+
+
+_markdown = mistune.create_markdown(renderer=_SafeRenderer(escape=True))
 
 
 def _items_to_table(type_key: str, items: list[dict]) -> str:
@@ -109,20 +117,24 @@ async def ui_sessions(request: Request):
     )
 
 
-@ui_router.get("/ui/partials/history/{thread_id}", response_class=HTMLResponse)
-async def ui_history(request: Request, thread_id: str):
-    # Run as a script (`python src/main.py`) the live app is __main__; otherwise it is the imported `main`.
-    # Never import `main` here: that would build a second app with no agent.
-    _main = next(
+def _live_main():
+    """The module holding the running app. Run as a script (`python src/main.py`) it is `__main__`; otherwise the
+    imported `main`. Never import `main` here: that would build a second app with no agent."""
+    return next(
         (m for m in (sys.modules.get("__main__"), sys.modules.get("main")) if hasattr(m, "agent_app")),
         None,
     )
+
+
+@ui_router.get("/ui/partials/history/{thread_id}", response_class=HTMLResponse)
+async def ui_history(request: Request, thread_id: ThreadId):
+    _main = _live_main()
     if _main is None or _main.agent_app is None:
         raise HTTPException(status_code=503, detail="Agent not ready")
     history = await get_session_history(_main.agent_app, thread_id)
     if history is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    messages = history.get("messages", [])
+    messages = history.messages
     return templates.TemplateResponse(
         request,
         "partials/message_list.html",
@@ -131,7 +143,11 @@ async def ui_history(request: Request, thread_id: str):
 
 
 @ui_router.delete("/ui/sessions/{thread_id}", response_class=HTMLResponse)
-async def ui_delete_session(request: Request, thread_id: str):
+async def ui_delete_session(request: Request, thread_id: ThreadId):
+    _main = _live_main()
+    lock = getattr(_main, "_thread_locks", {}).get(thread_id)
+    if lock is not None and lock.locked():
+        raise HTTPException(status_code=409, detail="A request is running on this session; try again when it finishes")
     pool = get_asyncpg_pool()
     deleted = await delete_session(pool, thread_id)
     if not deleted:

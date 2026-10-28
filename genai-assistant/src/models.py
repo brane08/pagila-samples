@@ -23,6 +23,7 @@ class AgentState(TypedDict):
     summary: str
     tool_retry_count: int
     reflection_retry_count: int
+    reflection_critique: str | None
     preferred_store_id: int | None
     customer_email: str | None
     user_id: str
@@ -65,3 +66,4 @@ class ReindexStatus(BaseModel):
 
 class ConfirmRequest(BaseModel):
     approved: bool
+    confirm_id: str | None = Field(default=None, max_length=64)

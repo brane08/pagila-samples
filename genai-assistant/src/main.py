@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -29,13 +30,26 @@ agent_app = None
 mcp_client = None
 _reindex_job: ReindexStatus = ReindexStatus(status="idle")
 _reindex_task: asyncio.Task | None = None
+_thread_locks: dict[str, asyncio.Lock] = {}
+_run_tasks: set[asyncio.Task] = set()
 logger = logging.getLogger(__name__)
 ThreadId = Annotated[str, PathParam(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
+
+
+def _require_single_worker() -> None:
+    """Thread locks and the approval re-checks live in this process; several workers would silently bypass them."""
+    workers = os.environ.get("WEB_CONCURRENCY", "1")
+    if workers.isdigit() and int(workers) > 1:
+        raise RuntimeError(
+            f"WEB_CONCURRENCY={workers}: genai-assistant keeps per-thread locks in process memory and must run "
+            "as a single worker."
+        )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global agent_app, mcp_client
+    _require_single_worker()
     print("Starting up: initialising DB connection pools...")
     asyncpg_pool = await init_asyncpg_pool()
     psycopg_pool = await init_psycopg_pool()
@@ -102,21 +116,111 @@ async def _has_pending_interrupt(config: dict) -> bool:
     return any(task.interrupts for task in state.tasks)
 
 
+def _confirm_id(tool_calls: list) -> str:
+    """Stable id of one pending approval, derived from the proposed calls; ties a confirm to the card the user saw."""
+    basis = [[tc.get("id"), tc.get("name"), tc.get("args")] for tc in tool_calls if isinstance(tc, dict)]
+    return hashlib.sha256(json.dumps(basis, sort_keys=True, default=str).encode()).hexdigest()[:16]
+
+
+def _calls_of(interrupts: list) -> list:
+    calls: list = []
+    for i in interrupts:
+        if isinstance(i.value, dict):
+            calls.extend(i.value.get("tool_calls", []))
+    return calls
+
+
+async def _pending_interrupts(config: dict) -> list:
+    state = await agent_app.aget_state(config)
+    return [i for task in state.tasks for i in task.interrupts]
+
+
+async def _pending_tool_calls(config: dict) -> list | None:
+    """Tool calls (across all pending interrupts) awaiting confirmation, or None when nothing is pending."""
+    interrupts = await _pending_interrupts(config)
+    return _calls_of(interrupts) if interrupts else None
+
+
+def _resume_command(interrupts: list, approved: bool) -> Command:
+    """One decision for everything shown on the card. Several interrupts need an id-keyed resume map."""
+    decision = {"approved": approved}
+    if len(interrupts) > 1:
+        return Command(resume={i.id: decision for i in interrupts})
+    return Command(resume=decision)
+
+
+def _thread_lock(thread_id: str) -> asyncio.Lock:
+    return _thread_locks.setdefault(thread_id, asyncio.Lock())
+
+
+def _evict_lock(thread_id: str) -> None:
+    lock = _thread_locks.get(thread_id)
+    if lock is not None and not lock.locked():
+        del _thread_locks[thread_id]
+
+
+def _pending_detail(message: str, pending: list) -> dict:
+    return {"message": message, "tool_calls": pending, "confirm_id": _confirm_id(pending)}
+
+
+async def _reject_if_pending_or_busy(config: dict) -> None:
+    """409 when a run is in flight, or when a tool call awaits confirmation (with the calls, so the UI can show them)."""
+    thread_id = config["configurable"]["thread_id"]
+    if _thread_lock(thread_id).locked():
+        raise HTTPException(status_code=409, detail={"message": "Another request is running on this thread"})
+    pending = await _pending_tool_calls(config)
+    if pending is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=_pending_detail("A tool call is awaiting confirmation on this thread", pending),
+        )
+
+
+@app.get("/chat/pending/{thread_id}")
+async def chat_pending(thread_id: ThreadId):
+    """Tool calls awaiting confirmation, so the UI can restore the confirm card after a reload."""
+    _require_agent()
+    pending = await _pending_tool_calls(_config(thread_id))
+    return {
+        "pending": pending is not None,
+        "tool_calls": pending or [],
+        "confirm_id": _confirm_id(pending) if pending is not None else None,
+    }
+
+
+MAX_AUTO_REJECTS = 5
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     _require_agent()
     config = _config(request.thread_id)
-    if await _has_pending_interrupt(config):
-        raise HTTPException(status_code=409, detail="A tool call is awaiting confirmation on this thread")
-    result = await agent_app.ainvoke(
-        {"messages": [HumanMessage(content=request.message)], "user_id": request.user_id},
-        config=config,
-    )
-    if result.get("__interrupt__"):
-        raise HTTPException(
-            status_code=409,
-            detail="Tool confirmation required; use /chat/stream and /chat/confirm/{thread_id}/stream",
-        )
+    await _reject_if_pending_or_busy(config)
+    lock = _thread_lock(request.thread_id)
+    if lock.locked():
+        raise HTTPException(status_code=409, detail={"message": "Another request is running on this thread"})
+    try:
+        async with lock:
+            result = await agent_app.ainvoke(
+                {"messages": [HumanMessage(content=request.message)], "user_id": request.user_id},
+                config=config,
+            )
+            if result.get("__interrupt__"):
+                # The blocking API cannot confirm tools; reject so the thread is not left paused.
+                # A rejected turn can make the model propose another tool, so keep rejecting (bounded).
+                for _ in range(MAX_AUTO_REJECTS):
+                    result = await agent_app.ainvoke(_resume_command(result["__interrupt__"], False), config=config)
+                    if not result.get("__interrupt__"):
+                        break
+                pending = await _pending_tool_calls(config)
+                detail = (
+                    _pending_detail("Tool confirmation required; use /chat/stream and /chat/confirm/{thread_id}/stream", pending)
+                    if pending is not None
+                    else "Tool confirmation required; use /chat/stream and /chat/confirm/{thread_id}/stream"
+                )
+                raise HTTPException(status_code=409, detail=detail)
+    finally:
+        _evict_lock(request.thread_id)
     messages = result["messages"]
     return ChatResponse(
         answer=messages[-1].content,
@@ -124,14 +228,60 @@ async def chat(request: ChatRequest):
     )
 
 
-async def _stream_agent_events(input_or_command, config: dict) -> AsyncIterator[str]:
-    """Shared SSE generator: streams token/tool events, then emits done or tool_confirm."""
+async def _stream_agent_events(input_or_command, config: dict, confirm_id: str | None = None) -> AsyncIterator[str]:
+    """Shared SSE generator: holds the thread lock, streams token/tool events, then emits done or tool_confirm.
+
+    The pending-approval state is re-checked under the lock: a confirm must match the card the user saw
+    (`confirm_id`), and a new message must not start while an approval is pending.
+    """
+    thread_id = config["configurable"]["thread_id"]
+    lock = _thread_lock(thread_id)
+    if lock.locked():
+        yield f"data: {json.dumps({'type': 'error', 'message': 'Another request is running on this thread.'})}\n\n"
+        return
+    await lock.acquire()  # not locked, so this does not wait: no other request can slip in before the task starts
+    queue: asyncio.Queue[str | None] = asyncio.Queue()
+
+    async def _run() -> None:
+        # Runs detached from the HTTP response: a client disconnect must not cancel a resumed graph mid-tool,
+        # or the checkpoint would not advance and the same approval would reappear (and the tool re-run).
+        try:
+            pending = await _pending_tool_calls(config)
+            is_confirm = isinstance(input_or_command, Command)
+            if is_confirm and (pending is None or (confirm_id and confirm_id != _confirm_id(pending))):
+                await queue.put(f"data: {json.dumps({'type': 'error', 'message': 'That approval is no longer pending.', 'code': 'stale_confirm'})}\n\n")
+            elif not is_confirm and pending is not None:
+                await queue.put(f"data: {json.dumps({'type': 'error', 'message': 'A tool call is awaiting your confirmation.', 'code': 'pending'})}\n\n")
+            else:
+                async for line in _stream_locked(input_or_command, config):
+                    await queue.put(line)
+        except Exception:
+            logger.exception("Agent run failed")
+            await queue.put(f"data: {json.dumps({'type': 'error', 'message': 'The assistant hit an error. Please try again.'})}\n\n")
+        finally:
+            lock.release()
+            _evict_lock(thread_id)
+            await queue.put(None)
+
+    task = asyncio.create_task(_run())
+    _run_tasks.add(task)  # strong ref: the loop only holds tasks weakly
+    task.add_done_callback(_run_tasks.discard)
+    while (line := await queue.get()) is not None:
+        yield line
+
+
+async def _stream_locked(input_or_command, config: dict) -> AsyncIterator[str]:
     agent_streamed_any = False
     streamed_text = ""
     try:
         async for event in agent_app.astream_events(input_or_command, config=config, version="v2"):
             kind = event["event"]
-            if kind == "on_chat_model_stream":
+            if kind == "on_chat_model_start":
+                # A new agent run (e.g. after a reflection retry or a tool round) replaces earlier draft text.
+                if event.get("metadata", {}).get("langgraph_node") == "agent" and streamed_text:
+                    streamed_text = ""
+                    yield 'data: {"type": "reset"}\n\n'
+            elif kind == "on_chat_model_stream":
                 if event.get("metadata", {}).get("langgraph_node") == "agent":
                     chunk = event["data"]["chunk"]
                     if chunk.content:
@@ -146,9 +296,9 @@ async def _stream_agent_events(input_or_command, config: dict) -> AsyncIterator[
         state = await agent_app.aget_state(config)
         if any(task.interrupts for task in state.tasks):
             interrupts = [i for task in state.tasks for i in task.interrupts]
-            interrupt_value = interrupts[0].value
             thread_id = config["configurable"]["thread_id"]
-            yield f"data: {json.dumps({'type': 'tool_confirm', 'thread_id': thread_id, 'tool_calls': interrupt_value.get('tool_calls', [])})}\n\n"
+            calls = _calls_of(interrupts)
+            yield f"data: {json.dumps({'type': 'tool_confirm', 'thread_id': thread_id, 'tool_calls': calls, 'confirm_id': _confirm_id(calls)})}\n\n"
         else:
             values = getattr(state, "values", None)
             msgs = values.get("messages", []) if values else []
@@ -171,8 +321,7 @@ async def _stream_agent_events(input_or_command, config: dict) -> AsyncIterator[
 async def chat_stream(request: ChatRequest):
     _require_agent()
     config = _config(request.thread_id)
-    if await _has_pending_interrupt(config):
-        raise HTTPException(status_code=409, detail="A tool call is awaiting confirmation on this thread")
+    await _reject_if_pending_or_busy(config)
     return StreamingResponse(
         _stream_agent_events(
             {"messages": [HumanMessage(content=request.message)], "user_id": request.user_id},
@@ -187,11 +336,20 @@ async def chat_confirm_stream(thread_id: ThreadId, body: ConfirmRequest):
     """Resume a paused agent run after user approves or rejects the pending tool call."""
     _require_agent()
     config = _config(thread_id)
-    if not await _has_pending_interrupt(config):
+    if _thread_lock(thread_id).locked():
+        raise HTTPException(status_code=409, detail={"message": "Another request is running on this thread"})
+    interrupts = await _pending_interrupts(config)
+    if not interrupts:
         raise HTTPException(status_code=409, detail="No tool call is awaiting confirmation on this thread")
-    command = Command(resume={"approved": body.approved})
+    pending = _calls_of(interrupts)
+    if body.confirm_id and body.confirm_id != _confirm_id(pending):
+        raise HTTPException(
+            status_code=409,
+            detail=_pending_detail("That approval is stale; a different tool call is now pending", pending),
+        )
+    command = _resume_command(interrupts, body.approved)
     return StreamingResponse(
-        _stream_agent_events(command, config),
+        _stream_agent_events(command, config, body.confirm_id),
         media_type="text/event-stream",
     )
 

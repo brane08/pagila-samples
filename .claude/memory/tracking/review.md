@@ -17,3 +17,16 @@
 - Outcome: (1) no regressions, only low inherited items. (2)-(4) produced BG-013..020 (4 high, 4 med) plus BG-021 (low bundle). BG-013..018 fixed 2026-10-27; BG-019..021 open.
 - Not checked: nothing was executed (code reading only); the .venv was off-limits to the reviewers, so mistune's escape default, installed langgraph/ToolNode/mcp-adapter behaviour and Command(resume) semantics are unverified; real Hibernate/Ebean runtime errors; analytics_queries.py, rag.py, store_server.py and analytics_server.py; test bodies (names and structure only); provider message-ordering strictness; Angular code.
 - Findings produced: BG-013..021.
+
+## RV-004 — Opus review of genai-assistant, 2026-10-28
+- Scope: 1 read-only opus subagent on main 3e7aed8 (src/ of genai-assistant): regressions of BG-013..021 fixes, LangGraph semantics, security, async lifecycle, test gaps. Opus used because the user asked for it.
+- Outcome: 20 findings (3 high, 10 med, 7 low), bundled as BG-022..028. Open.
+- Not checked: nothing executed; .venv off-limits so langchain-mcp-adapters content shape and provider message-ordering strictness are unverified (OR-006, OR-012 plausible only).
+- Findings produced: BG-022..028.
+
+## RV-005 — Tool-approval prompt review of genai-assistant, 2026-10-28
+- Scope: 1 read-only sonnet subagent (separate from the main thread) on review-rv004 working tree: interrupt/confirm flow in agent.py, main.py, chat.js, ui_routes/templates.
+- Outcome: 14 findings OR-101..114 (2 high, 6 med, 6 low), bundled as BG-029 (flow integrity) and BG-030 (UX/prompt text). Open.
+- Verified OK: no path to tools except via human_review; reject defaults on missing `approved`; args shown = args executed; card uses textContent (no XSS); pending interrupts survive restart.
+- Not checked: nothing executed (code reading only); multi-worker behaviour is by inspection.
+- Findings produced: BG-029, BG-030.

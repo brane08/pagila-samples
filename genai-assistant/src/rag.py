@@ -1,5 +1,8 @@
 # src/rag.py
+import asyncio
 import os
+from functools import lru_cache
+from urllib.parse import quote
 
 import asyncpg
 from dotenv import load_dotenv
@@ -14,8 +17,8 @@ load_dotenv()
 embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
 DB_CONNECTION = (
-    f"postgresql+psycopg://{os.getenv('DB_USER', 'postgres')}"
-    f":{os.getenv('DB_PASSWORD', 'postgres')}"
+    f"postgresql+psycopg://{quote(os.getenv('DB_USER', 'postgres'), safe='')}"
+    f":{quote(os.getenv('DB_PASSWORD', 'password'), safe='')}"
     f"@{os.getenv('DB_HOST', 'localhost')}"
     f":{os.getenv('DB_PORT', '5432')}"
     f"/{os.getenv('DB_NAME', 'sakila')}"
@@ -23,8 +26,10 @@ DB_CONNECTION = (
 
 COLLECTION_NAME = "film_descriptions"
 
+
+@lru_cache(maxsize=1)
 def get_vector_store() -> PGVector:
-    """Return a PGVector store backed by the Pagila database."""
+    """Return the shared PGVector store (one engine/pool) backed by the Pagila database."""
     return PGVector(
         embeddings=embeddings,
         collection_name=COLLECTION_NAME,
@@ -43,7 +48,7 @@ async def index_films():
         port=int(os.getenv("DB_PORT", 5432)),
         database=os.getenv("DB_NAME", "sakila"),
         user=os.getenv("DB_USER", "postgres"),
-        password=os.getenv("DB_PASSWORD", "postgres"),
+        password=os.getenv("DB_PASSWORD", "password"),
     )
     try:
         rows = await conn.fetch(
@@ -93,14 +98,14 @@ async def index_films():
         ))
 
     store = get_vector_store()
-    store.add_documents(docs, ids=[str(d.metadata["film_id"]) for d in docs])
+    await asyncio.to_thread(store.add_documents, docs, ids=[str(d.metadata["film_id"]) for d in docs])
     print(f"Indexed {len(docs)} films into pgvector.")
 
 
 async def semantic_search(query: str, k: int = 5) -> list[dict]:
     """Return k most semantically similar films to the query string."""
     store = get_vector_store()
-    results = store.similarity_search_with_score(query, k=k)
+    results = await asyncio.to_thread(store.similarity_search_with_score, query, k=k)
     return [
         {
             **doc.metadata,
@@ -113,5 +118,4 @@ async def semantic_search(query: str, k: int = 5) -> list[dict]:
 
 # ── Run indexing directly ─────────────────────────────────────────────────────
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(index_films())
