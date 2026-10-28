@@ -236,8 +236,8 @@ class _IdleState:
 
 
 def _pending_then_idle(client_agent):
-    """First aget_state (the guard) reports a pending interrupt; later calls (post-stream) report none."""
-    client_agent.aget_state = AsyncMock(side_effect=[_PendingState(), _IdleState(), _IdleState()])
+    """The endpoint guard and the under-lock re-check see a pending interrupt; later calls (post-stream) see none."""
+    client_agent.aget_state = AsyncMock(side_effect=[_PendingState(), _PendingState(), _IdleState(), _IdleState()])
 
 
 class TestChatConfirm:
@@ -291,6 +291,177 @@ class TestChatConfirm:
         m.agent_app.ainvoke = AsyncMock(return_value={"messages": [], "__interrupt__": [object()]})
         resp = await client.post("/chat", json={"message": "hi", "thread_id": "t1"})
         assert resp.status_code == 409
+
+    async def test_409_body_carries_pending_tool_calls(self, client):
+        import main as m
+
+        calls = [{"name": "search_films", "args": {"title": "x"}, "id": "1"}]
+        state = SimpleNamespace(tasks=[SimpleNamespace(interrupts=[SimpleNamespace(value={"tool_calls": calls})])])
+        m.agent_app.aget_state = AsyncMock(return_value=state)
+        resp = await client.post("/chat/stream", json={"message": "hi", "thread_id": "t1"})
+        assert resp.status_code == 409
+        assert resp.json()["detail"]["tool_calls"] == calls
+
+    async def test_pending_endpoint_reports_calls(self, client):
+        import main as m
+
+        calls = [{"name": "t", "args": {}, "id": "1"}]
+        state = SimpleNamespace(tasks=[SimpleNamespace(interrupts=[SimpleNamespace(value={"tool_calls": calls})])])
+        m.agent_app.aget_state = AsyncMock(return_value=state)
+        body = (await client.get("/chat/pending/t1")).json()
+        assert body["pending"] is True and body["tool_calls"] == calls and body["confirm_id"] == m._confirm_id(calls)
+        m.agent_app.aget_state = AsyncMock(return_value=_IdleState())
+        assert (await client.get("/chat/pending/t1")).json() == {"pending": False, "tool_calls": [], "confirm_id": None}
+
+    async def test_confirm_id_depends_on_calls(self):
+        import main as m
+
+        a = [{"name": "t", "args": {"x": 1}, "id": "1"}]
+        b = [{"name": "t", "args": {"x": 2}, "id": "1"}]
+        assert m._confirm_id(a) == m._confirm_id(list(a))
+        assert m._confirm_id(a) != m._confirm_id(b)
+
+    async def test_stale_confirm_id_is_rejected(self, client):
+        import main as m
+
+        calls = [{"name": "t", "args": {}, "id": "1"}]
+        state = SimpleNamespace(tasks=[SimpleNamespace(interrupts=[SimpleNamespace(value={"tool_calls": calls})])])
+        m.agent_app.aget_state = AsyncMock(return_value=state)
+        m.agent_app.astream_events = MagicMock()
+        resp = await client.post("/chat/confirm/t1/stream", json={"approved": True, "confirm_id": "not-the-card"})
+        assert resp.status_code == 409
+        assert resp.json()["detail"]["confirm_id"] == m._confirm_id(calls)
+        m.agent_app.astream_events.assert_not_called()
+
+    async def test_matching_confirm_id_is_accepted(self, client):
+        import main as m
+
+        calls = [{"name": "t", "args": {}, "id": "1"}]
+        pending = SimpleNamespace(tasks=[SimpleNamespace(interrupts=[SimpleNamespace(value={"tool_calls": calls})])])
+        m.agent_app.aget_state = AsyncMock(side_effect=[pending, pending, _IdleState(), _IdleState()])
+        resp = await client.post(
+            "/chat/confirm/t1/stream", json={"approved": True, "confirm_id": m._confirm_id(calls)}
+        )
+        assert resp.status_code == 200
+        assert _parse_sse(resp.text)[-1]["type"] == "done"
+
+    async def test_confirm_rechecked_under_lock(self, client):
+        """A second approve that passed the endpoint guard but finds nothing pending gets an SSE error, no run."""
+        import main as m
+
+        m.agent_app.aget_state = AsyncMock(side_effect=[_PendingState(), _IdleState()])
+        m.agent_app.astream_events = MagicMock()
+        resp = await client.post("/chat/confirm/t1/stream", json={"approved": True})
+        events = _parse_sse(resp.text)
+        assert events[-1]["type"] == "error" and events[-1]["code"] == "stale_confirm"
+        m.agent_app.astream_events.assert_not_called()
+
+    async def test_blocking_chat_rejects_repeated_interrupts(self, client):
+        import main as m
+
+        interrupted = {"messages": [], "__interrupt__": [object()]}
+        m.agent_app.ainvoke = AsyncMock(side_effect=[interrupted, interrupted, {"messages": [], "answer": 1}])
+        m.agent_app.aget_state = AsyncMock(return_value=_IdleState())
+        resp = await client.post("/chat", json={"message": "hi", "thread_id": "t1"})
+        assert resp.status_code == 409
+        assert m.agent_app.ainvoke.await_count == 3
+
+    async def test_run_survives_client_disconnect(self, client):
+        """Closing the SSE generator mid-run must not cancel the graph: it finishes and releases the lock."""
+        import asyncio
+        import main as m
+
+        gate = asyncio.Event()
+        finished = asyncio.Event()
+
+        async def _events(*a, **k):
+            yield {"event": "on_tool_start", "name": "t", "data": {"input": {}}}
+            await gate.wait()
+            yield {"event": "on_tool_end", "name": "t", "data": {}}
+            finished.set()
+
+        m.agent_app.astream_events = _events
+        m.agent_app.aget_state = AsyncMock(return_value=_IdleState())
+        m._thread_locks.clear()
+        gen = m._stream_agent_events({"messages": []}, m._config("disc1"))
+        first = await gen.__anext__()
+        assert "tool_start" in first
+        await gen.aclose()  # client went away
+        assert m._thread_lock("disc1").locked()
+        gate.set()
+        await asyncio.wait_for(finished.wait(), 2)
+        await asyncio.wait_for(asyncio.gather(*m._run_tasks), 2)
+        assert "disc1" not in m._thread_locks
+
+    async def test_pending_calls_aggregate_across_interrupts_and_resume_is_keyed(self):
+        import main as m
+
+        a = SimpleNamespace(id="i1", value={"tool_calls": [{"name": "a", "args": {}, "id": "1"}]})
+        b = SimpleNamespace(id="i2", value={"tool_calls": [{"name": "b", "args": {}, "id": "2"}]})
+        assert [c["name"] for c in m._calls_of([a, b])] == ["a", "b"]
+        assert m._resume_command([a, b], True).resume == {"i1": {"approved": True}, "i2": {"approved": True}}
+        assert m._resume_command([a], False).resume == {"approved": False}
+
+    def test_multi_worker_start_is_refused(self, monkeypatch):
+        import main as m
+
+        monkeypatch.setenv("WEB_CONCURRENCY", "2")
+        with pytest.raises(RuntimeError):
+            m._require_single_worker()
+        monkeypatch.setenv("WEB_CONCURRENCY", "1")
+        m._require_single_worker()
+
+    async def test_lock_entries_are_evicted(self, client):
+        import main as m
+
+        m._thread_locks.clear()
+        m.agent_app.ainvoke = AsyncMock(return_value={"messages": [SimpleNamespace(content="ok", tool_calls=[])]})
+        m.agent_app.aget_state = AsyncMock(return_value=_IdleState())
+        assert (await client.post("/chat", json={"message": "hi", "thread_id": "evict1"})).status_code == 200
+        assert "evict1" not in m._thread_locks
+
+    async def test_409_when_thread_busy(self, client):
+        import main as m
+
+        lock = m._thread_lock("busy-1")
+        await lock.acquire()
+        try:
+            for path, body in (("/chat/stream", {"message": "hi", "thread_id": "busy-1"}),
+                               ("/chat", {"message": "hi", "thread_id": "busy-1"})):
+                resp = await client.post(path, json=body)
+                assert resp.status_code == 409
+        finally:
+            lock.release()
+
+    async def test_blocking_chat_rejects_pending_tool_call_it_cannot_confirm(self, client):
+        import main as m
+
+        m.agent_app.ainvoke = AsyncMock(return_value={"messages": [], "__interrupt__": [object()]})
+        resp = await client.post("/chat", json={"message": "hi", "thread_id": "t1"})
+        assert resp.status_code == 409
+        resume = m.agent_app.ainvoke.call_args_list[-1].args[0]
+        assert resume.resume == {"approved": False}
+
+    async def test_stream_resets_between_agent_runs_and_sends_final_warning(self, client):
+        import main as m
+
+        def chunk(text):
+            return {"event": "on_chat_model_stream", "metadata": {"langgraph_node": "agent"},
+                    "data": {"chunk": SimpleNamespace(content=text)}}
+
+        start = {"event": "on_chat_model_start", "metadata": {"langgraph_node": "agent"}}
+
+        async def _events(*a, **k):
+            for e in (start, chunk("draft"), start, chunk("final")):
+                yield e
+
+        m.agent_app.astream_events = _events
+        m.agent_app.aget_state = AsyncMock(
+            side_effect=[_IdleState(), _IdleState(), SimpleNamespace(tasks=[], values={"messages": []})]
+        )
+        resp = await client.post("/chat/stream", json={"message": "hi", "thread_id": "rs1"})
+        types = [e["type"] for e in _parse_sse(resp.text)]
+        assert types == ["token", "reset", "token", "done"]
 
     async def test_stream_error_message_is_generic(self, client):
         import main as m
@@ -780,8 +951,38 @@ class TestToolErrorRecovery:
             "user_id": "anon",
         }
         result = await agent.handle_tool_errors(state)
-        assert result.get("tool_retry_count") == 0
-        assert "messages" not in result or not result["messages"]
+        assert result["tool_retry_count"] == 0
+        assert [m.content for m in result["messages"]] == [agent.GIVE_UP_MESSAGE]
+        state["messages"] = [tm, *result["messages"]]
+        assert agent._after_tool_errors(state) == agent.END
+
+    @pytest.mark.asyncio
+    async def test_content_block_and_status_errors_are_detected(self):
+        from langchain_core.messages import ToolMessage
+        import agent
+
+        blocks = ToolMessage(content=[{"type": "text", "text": '{"error": "boom"}'}], tool_call_id="a", name="t")
+        flagged = ToolMessage(content="Error: invoking tool failed", tool_call_id="b", name="t", status="error")
+        fine = ToolMessage(content=[{"type": "text", "text": '{"title": "Jaws"}'}], tool_call_id="c", name="t")
+        assert agent._tool_error(blocks) == "boom"
+        assert agent._tool_error(flagged) == "Error: invoking tool failed"
+        assert agent._tool_error(fine) is None
+
+    @pytest.mark.asyncio
+    async def test_short_message_after_answer_is_still_classified(self, monkeypatch):
+        from langchain_core.messages import AIMessage, HumanMessage
+        import agent
+
+        mock_classifier = MagicMock()
+        mock_classifier.ainvoke = AsyncMock(return_value=agent.TopicCheck(relevant=False))
+        monkeypatch.setattr(agent, "classifier", mock_classifier)
+        state = {
+            "messages": [HumanMessage(content="top films"), AIMessage(content="Here they are."), HumanMessage(content="tell a joke")],
+            "summary": "",
+        }
+        result = await agent.validate_input(state)
+        mock_classifier.ainvoke.assert_called_once()
+        assert result["messages"]
 
     @pytest.mark.asyncio
     async def test_non_json_tool_content_treated_as_no_error(self):
@@ -916,12 +1117,28 @@ class TestUserPreferencesNodes:
             __aexit__=AsyncMock(return_value=None),
         ))
 
-        tm = ToolMessage(content='{"store_id": 1, "city": "Lethbridge"}', tool_call_id="tc1", name="list_stores")
-        state = {"messages": [tm], "summary": "", "tool_retry_count": 0,
+        from langchain_core.messages import HumanMessage
+
+        tm = ToolMessage(content='{"store_id": 7, "email": "other@example.com"}', tool_call_id="tc1", name="list_stores")
+        state = {"messages": [HumanMessage(content="Hi, my store is 1 and my email is jane@example.com."), tm],
+                 "summary": "", "tool_retry_count": 0,
                  "preferred_store_id": None, "customer_email": None, "user_id": "user-1"}
         result = await agent.save_prefs(state, mock_pool)
         mock_conn.execute.assert_called_once()
-        assert result["preferred_store_id"] == 1
+        assert result == {"preferred_store_id": 1, "customer_email": "jane@example.com"}
+
+    @pytest.mark.asyncio
+    async def test_save_prefs_ignores_tool_output_without_user_statement(self):
+        import agent
+        from langchain_core.messages import HumanMessage, ToolMessage
+
+        mock_pool = MagicMock()
+        tm = ToolMessage(content='{"store_id": 1, "email": "x@example.com"}', tool_call_id="tc1", name="t")
+        state = {"messages": [HumanMessage(content="list customers at store 1"), tm],
+                 "summary": "", "tool_retry_count": 0,
+                 "preferred_store_id": None, "customer_email": None, "user_id": "user-1"}
+        assert await agent.save_prefs(state, mock_pool) == {}
+        mock_pool.acquire.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_save_prefs_skips_when_store_id_unchanged(self):
@@ -936,8 +1153,10 @@ class TestUserPreferencesNodes:
             __aexit__=AsyncMock(return_value=None),
         ))
 
+        from langchain_core.messages import HumanMessage
+
         tm = ToolMessage(content='{"store_id": 1}', tool_call_id="tc1", name="list_stores")
-        state = {"messages": [tm], "summary": "", "tool_retry_count": 0,
+        state = {"messages": [HumanMessage(content="my store is 1"), tm], "summary": "", "tool_retry_count": 0,
                  "preferred_store_id": 1, "customer_email": None, "user_id": "user-1"}
         await agent.save_prefs(state, mock_pool)
         mock_conn.execute.assert_not_called()
@@ -1016,10 +1235,12 @@ class TestReflectionNode:
         }
         result = await agent.reflect_answer(state)
         assert result["reflection_retry_count"] == 1
-        assert "messages" in result
+        assert result["reflection_critique"] == "List specific film titles."
         assert len(result["messages"]) == 1
-        assert isinstance(result["messages"][0], SystemMessage)
-        assert "List specific film titles." in result["messages"][0].content
+        assert isinstance(result["messages"][0], RemoveMessage)
+        assert result["messages"][0].id == "ai-1"
+        assert agent._after_reflect({"messages": [], "reflection_critique": "x"}) == "agent"
+        assert agent._after_reflect({"messages": [], "reflection_critique": None}) == "ground"
 
     @pytest.mark.asyncio
     async def test_reflect_no_second_retry(self, monkeypatch):
@@ -1177,7 +1398,11 @@ class TestUiRoutes:
         assert "text/html" in resp.headers["content-type"]
 
     async def test_ui_partials_history_returns_html(self, client):
-        fake_history = {"messages": [{"role": "user", "content": "hi"}]}
+        from models import MessageRecord, SessionHistory
+        fake_history = SessionHistory(thread_id="t1", messages=[
+            MessageRecord(role="user", content="hello there"),
+            MessageRecord(role="assistant", content="**hi** back"),
+        ])
         with (
             patch("ui_routes.get_session_history", AsyncMock(return_value=fake_history)),
             patch("ui_routes.get_asyncpg_pool", return_value=MagicMock()),
@@ -1185,6 +1410,8 @@ class TestUiRoutes:
             resp = await client.get("/ui/partials/history/t1")
         assert resp.status_code == 200
         assert "text/html" in resp.headers["content-type"]
+        assert "hello there" in resp.text
+        assert "<strong>hi</strong>" in resp.text
 
     async def test_ui_delete_session_returns_html(self, client):
         with (
@@ -1203,6 +1430,28 @@ class TestUiRoutes:
         ):
             resp = await client.delete("/ui/sessions/nope")
         assert resp.status_code == 404
+
+    async def test_ui_routes_reject_invalid_thread_ids(self, client):
+        assert (await client.get("/ui/partials/history/bad.id")).status_code == 422
+        assert (await client.delete("/ui/sessions/bad.id")).status_code == 422
+
+    async def test_ui_delete_refused_while_run_in_flight(self, client):
+        import asyncio
+        import main as m
+
+        lock = asyncio.Lock()
+        await lock.acquire()
+        m._thread_locks["busy1"] = lock
+        try:
+            with (
+                patch("ui_routes.delete_session", AsyncMock(return_value=True)) as deleter,
+                patch("ui_routes.get_asyncpg_pool", return_value=MagicMock()),
+            ):
+                resp = await client.delete("/ui/sessions/busy1")
+            assert resp.status_code == 409
+            deleter.assert_not_called()
+        finally:
+            m._thread_locks.pop("busy1", None)
 
 
 class TestAnalyticsRoute:

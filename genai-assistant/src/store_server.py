@@ -19,6 +19,7 @@ from pagila_tables import (
     staff,
     store,
 )
+from query_utils import LIKE_ESCAPE, clamp, like
 
 load_dotenv()
 
@@ -111,10 +112,10 @@ async def get_store_inventory(store_id: int, category: str = "", limit: int = 20
         )
         .group_by(film.c.film_id, film.c.title, film.c.rating, film.c.rental_rate, category_t.c.name)
         .order_by(film.c.title)
-        .limit(limit)
+        .limit(clamp(limit))
     )
     if category:
-        stmt = stmt.where(category_t.c.name.ilike(category))
+        stmt = stmt.where(category_t.c.name.ilike(like(category), escape=LIKE_ESCAPE))
     async with engine.connect() as conn:
         result = await conn.execute(stmt)
         return [dict(row) for row in result.mappings()]
@@ -144,7 +145,7 @@ async def get_store_rentals(store_id: int, limit: int = 20) -> list[dict]:
         .join(customer, rental.c.customer_id == customer.c.customer_id)
         .where(inventory.c.store_id == store_id)
         .order_by(rental.c.rental_date.desc())
-        .limit(limit)
+        .limit(clamp(limit))
     )
     async with engine.connect() as conn:
         result = await conn.execute(stmt)
@@ -175,7 +176,7 @@ async def get_store_top_customers(store_id: int, limit: int = 10) -> list[dict]:
         .where(inventory.c.store_id == store_id)
         .group_by(customer.c.customer_id, customer.c.first_name, customer.c.last_name, customer.c.email)
         .order_by(rental_count.desc(), total_spent.desc())
-        .limit(limit)
+        .limit(clamp(limit))
     )
     async with engine.connect() as conn:
         result = await conn.execute(stmt)
@@ -194,7 +195,7 @@ async def get_customer_store_payments(customer_email: str, store_id: int) -> dic
         customer.c.customer_id,
         customer.c.first_name.concat(" ").concat(customer.c.last_name).label("full_name"),
         customer.c.email,
-    ).where(customer.c.email.ilike(customer_email))
+    ).where(customer.c.email.ilike(like(customer_email), escape=LIKE_ESCAPE))
 
     async with engine.connect() as conn:
         customer_row = (await conn.execute(customer_stmt)).mappings().first()

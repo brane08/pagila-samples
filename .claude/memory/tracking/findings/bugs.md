@@ -85,3 +85,39 @@ Status: FIXED 2026-10-27
 ## BG-021
 (RV-003, low) Minor: film_server ILIKE inputs not escaped (`email="%"` matches the first customer) and `limit` unbounded; engine never disposed and both asyncpg pool and engine open in film_server; `film.rating` selected without cast (use rating_txt); `page<=0` / unbounded `size` / unused `direction` in FiqlQueryBean; `;` cannot appear in filter values; InvalidQueryException(field, cause) always says "Unknown field" and echoes input untruncated; `user_preferences` has no FK on preferred_store_id, no owner statement, no column migration path; chat.js does not handle non-2xx or SSE `error` events (input stays disabled); `ui_history` `import main` fallback can create a second app; chat.html thread_id in JS/URL needs `tojson` and UUID validation.
 Status: FIXED 2026-10-27 (rating cast, disposal, `;` in values, owner/migration left)
+
+## BG-022
+(RV-004 OR-003, high) `ui_routes.py:125` calls `history.get("messages")` on a `SessionHistory` pydantic model -> AttributeError, so `/ui/partials/history/{id}` returns 500 for every existing thread. The test mocks a dict.
+Status: FIXED 2026-10-28
+
+## BG-023
+(RV-004 OR-002, high) `sessions.py` queries unqualified `checkpoints*` over the asyncpg pool (default search_path public) but the saver writes to schema `langgraph`: `list_sessions` always returns [] (UndefinedTableError swallowed) and `delete_session` 500s. Not seen at runtime because the local DB has no checkpoint tables yet.
+Status: FIXED 2026-10-28
+
+## BG-024
+(RV-004 OR-001, high) Only `validate_input` fails open. clarify/reflect/ground/summarize classifier calls are unguarded, and a failure or client disconnect after the model emitted tool_calls leaves AIMessage.tool_calls with no ToolMessages and no pending interrupt, so the next turn is accepted and every provider call 400s (BG-014 failure mode via another path).
+Status: FIXED 2026-10-28 (real-graph integration test still open)
+
+## BG-025
+(RV-004 OR-004/010/011/016, med) Interrupt UX and concurrency: confirm card is memory-only so reload/stream error leaves the thread at 409 forever; same-thread runs are not serialized (check-then-act race, double confirm runs tools twice); confirm card shows only tool_calls[0] but approval covers all; blocking `/chat` leaves the thread paused after its 409.
+Status: FIXED 2026-10-28
+
+## BG-026
+(RV-004 OR-005/006, med) Streaming and reflection: every agent-node run streams into one bubble so a reflection retry shows both answers and defeats the `startswith` check that carries the grounding warning; the reflection critique is stored as a SystemMessage after an AIMessage (strict providers may 400) and the rejected draft stays in history.
+Status: FIXED 2026-10-28
+
+## BG-027
+(RV-004 OR-007/008/009/018, med) MCP servers: store_server/analytics_server/semantic_search lack the ILIKE escape and limit clamp added to film_server; analytics `store_id` filters in Python after SQL LIMIT; `index_films` runs sync ONNX embedding and PGVector writes on the event loop and `get_vector_store()` builds a new engine per call; rag.py default DB password differs ('postgres' vs 'password').
+Status: FIXED 2026-10-28
+
+## BG-028
+(RV-004 OR-012/013/014/015/017/019, low-med) tool-error detection and prefs parse JSON only for str content (adapter list blocks / ToolNode "Error:" text missed); prefs still inferred from tool output; 40-char topic-guard skip lets off-topic short messages through; tool_retry_count never caps; markdown images can exfiltrate via URL; UI routes lack ThreadId validation and delete is not guarded against in-flight runs.
+Status: FIXED 2026-10-28
+
+## BG-029
+(RV-005 OR-101/102/103/104/106/107/113, high-med) approval flow integrity: /chat/confirm is not bound to a specific interrupt (stale or double approve can approve a different call); /chat auto-reject ignores a second interrupt from the resumed run and leaves the thread paused; card hidden before outcome is known and not re-shown on 409/stream error; disconnect mid-resume leaves the interrupt pending so a tool may run twice; thread locks are per-process, never evicted, and /chat/stream checks then locks non-atomically; input stays enabled while a card is pending (message lost, orphan bubble); only interrupts[0] handled. Fix: interrupt id in card + request, atomic lock+pending check, re-fetch /chat/pending after any confirm error, disable input while pending.
+Status: FIXED 2026-10-28
+
+## BG-030
+(RV-005 OR-105/108/109/110/111/112/114, low-med) approval prompt UX and design: every tool gated with no read-only/mutating split and no per-call subset approval; no auth binding user↔thread (shared "default" thread); empty/non-dict interrupt renders a live Approve on `{}`; args box capped at 90px hides payload tail; card text does not say what approve/reject do; unused drifted partials/tool_confirm.html; history shows tool_calls without result after a cancelled run; clarify_tool_args false positive can hide the proposed call.
+Status: FIXED 2026-10-28 (allowlist, partial removed; rest done in BG-029 or won't fix, see item)

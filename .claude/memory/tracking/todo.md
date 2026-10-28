@@ -6,7 +6,7 @@ Counts per state and last-updated date per item file. No items here. Findings in
 |---|---|---|---|---|---|---|---|---|
 | items/design.md | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2026-10-26 |
 | items/feature.md | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2026-10-26 |
-| items/bugs.md | 0 | 0 | 0 | 0 | 0 | 1 | 20 | 2026-10-27 |
+| items/bugs.md | 0 | 0 | 0 | 0 | 0 | 1 | 30 | 2026-10-28 |
 | items/tests.md | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 2026-10-26 |
 | items/archive.md | - | - | - | - | - | - | 15 | 2026-10-26 |
 

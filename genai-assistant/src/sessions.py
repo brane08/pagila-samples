@@ -13,7 +13,7 @@ async def list_sessions(pool: asyncpg.Pool) -> list[SessionInfo]:
                 thread_id,
                 COUNT(*)                        AS step_count,
                 MAX(checkpoint->>'ts')          AS last_active
-            FROM checkpoints
+            FROM langgraph.checkpoints
             WHERE checkpoint_ns = ''
             GROUP BY thread_id
             ORDER BY MAX(checkpoint->>'ts') DESC NULLS LAST
@@ -69,10 +69,13 @@ async def get_session_history(agent_app, thread_id: str) -> SessionHistory | Non
 
 async def delete_session(pool: asyncpg.Pool, thread_id: str) -> bool:
     """Delete all checkpoints for a session. Returns False if the session did not exist."""
-    async with pool.acquire() as conn:
-        async with conn.transaction():
-            await conn.execute("DELETE FROM checkpoint_writes WHERE thread_id = $1", thread_id)
-            await conn.execute("DELETE FROM checkpoint_blobs  WHERE thread_id = $1", thread_id)
-            result = await conn.execute("DELETE FROM checkpoints WHERE thread_id = $1", thread_id)
+    try:
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute("DELETE FROM langgraph.checkpoint_writes WHERE thread_id = $1", thread_id)
+                await conn.execute("DELETE FROM langgraph.checkpoint_blobs  WHERE thread_id = $1", thread_id)
+                result = await conn.execute("DELETE FROM langgraph.checkpoints WHERE thread_id = $1", thread_id)
+    except asyncpg.UndefinedTableError:
+        return False
     # asyncpg returns "DELETE N" — extract row count
     return int(result.split()[-1]) > 0

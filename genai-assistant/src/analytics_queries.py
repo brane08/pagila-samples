@@ -111,7 +111,7 @@ async def rental_stats_by_category(pool: asyncpg.Pool) -> list[dict]:
         return [{**dict(r), "total_revenue": float(r["total_revenue"])} for r in rows]
 
 
-async def overdue_rentals(pool: asyncpg.Pool, limit: int = 20) -> list[dict]:
+async def overdue_rentals(pool: asyncpg.Pool, limit: int = 20, store_id: int | None = None) -> list[dict]:
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
             SELECT r.rental_id, f.film_id, f.title,
@@ -124,13 +124,16 @@ async def overdue_rentals(pool: asyncpg.Pool, limit: int = 20) -> list[dict]:
             JOIN customer cu ON r.customer_id = cu.customer_id
             WHERE r.return_date IS NULL
               AND CURRENT_DATE > r.rental_date::date + f.rental_duration
+              AND ($2::int IS NULL OR i.store_id = $2)
             ORDER BY days_overdue DESC
             LIMIT $1
-        """, limit)
+        """, limit, store_id)
         return [dict(r) for r in rows]
 
 
-async def slow_moving_films(pool: asyncpg.Pool, days: int = 90, limit: int = 20) -> list[dict]:
+async def slow_moving_films(
+    pool: asyncpg.Pool, days: int = 90, limit: int = 20, store_id: int | None = None
+) -> list[dict]:
     async with pool.acquire() as conn:
         # one row per (film, store) pair — a film with copies at both stores appears twice
         rows = await conn.fetch("""
@@ -143,10 +146,11 @@ async def slow_moving_films(pool: asyncpg.Pool, days: int = 90, limit: int = 20)
             FROM inventory i
             JOIN film f ON i.film_id = f.film_id
             LEFT JOIN rental r ON i.inventory_id = r.inventory_id
+            WHERE ($3::int IS NULL OR i.store_id = $3)
             GROUP BY f.film_id, f.title, f.rating, i.store_id
             HAVING MAX(r.rental_date) < NOW() - ($1 * INTERVAL '1 day')
                 OR MAX(r.rental_date) IS NULL
             ORDER BY days_since_rented DESC NULLS FIRST
             LIMIT $2
-        """, days, limit)
+        """, days, limit, store_id)
         return [dict(r) for r in rows]
