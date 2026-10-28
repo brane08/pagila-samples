@@ -97,15 +97,19 @@ async def index_films():
             },
         ))
 
-    store = get_vector_store()
-    await asyncio.to_thread(store.add_documents, docs, ids=[str(d.metadata["film_id"]) for d in docs])
+    def _upsert() -> None:
+        # Building the store opens the SQLAlchemy engine and embedding runs ONNX: keep both off the event loop.
+        get_vector_store().add_documents(docs, ids=[str(d.metadata["film_id"]) for d in docs])
+
+    await asyncio.to_thread(_upsert)
     print(f"Indexed {len(docs)} films into pgvector.")
 
 
 async def semantic_search(query: str, k: int = 5) -> list[dict]:
     """Return k most semantically similar films to the query string."""
-    store = get_vector_store()
-    results = await asyncio.to_thread(store.similarity_search_with_score, query, k=k)
+    results = await asyncio.to_thread(
+        lambda: get_vector_store().similarity_search_with_score(query, k=k)
+    )
     return [
         {
             **doc.metadata,
