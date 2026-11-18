@@ -42,3 +42,9 @@
 - Outcome: 20 findings (0 high, 6 med, 14 low), bundled as BG-037..041. BG-037/038 fixed and BG-039..041 partly fixed the same day (OR-301..306, 308..311, 313 done). Verified OK: SSE payloads via json.dumps, bounded regexes, generic error text, atomic lock+task start, escaping, query_utils, store_id in SQL.
 - Not checked: nothing run; venv unreadable, so langchain-mcp-adapters behaviour (per-call stdio sessions, `aclose`) is unverified; ui-angular, Java modules, database SQL, test_film_server_helpers/test_ui_render/test_query_utils, DB-backed tool tests, analytics.html, pagila_tables.
 - Findings produced: BG-037..041.
+
+## RV-008 — Opus whole-codebase review, 2026-11-18
+- Scope: 4 read-only opus subagents on main 1f15103 plus the uncommitted genai diff (agent.py, db.py, main.py, tests): (1) genai backend src; (2) genai UI, SSE, tests; (3) Java modules, root pom, schema.sql; (4) ui-angular, go-web, spring-vaadin. Opus used because the user asked for it and the code covers concurrency and approval binding.
+- Outcome: no SQL injection and no exploitable XSS found; no secrets in tracked files. 3 high (store API leaks manager password hash, schema.sql fails on a fresh DB with rating_txt drift, blank Angular film detail), the rest med/low, bundled as BG-042..052 plus TS-007/008. Verified OK: lock acquisition has no await between check and acquire, `_evict_lock` never removes a held lock, uncommitted `/chat` pending-under-lock change is correct, dual-mapped FKs and `Payment` not extending `BaseModel` correct in both ORMs, no subscription leaks in Angular.
+- Not checked: nothing executed (no tests, builds or Maven); `.venv` and `node_modules` unreadable, so langchain-mcp-adapters behaviour (per-call sessions, `aclose`) and Angular `resource.value()` error semantics are unverified; Ebean filter coercion is from memory; DB-backed tool tests and data-ebean runtime behaviour not exercised.
+- Findings produced: BG-042..052, TS-007, TS-008.

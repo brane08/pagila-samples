@@ -165,3 +165,47 @@ Status: PARTIAL 2026-10-28. Done: OR-306 (JSON DELETE returns 409 while a run ho
 ## BG-041
 (RV-007 OR-312/317/318/319/320, low) Misc: MCP tools may spawn a new stdio subprocess per call (adapter 0.2, unverified) and `mcp_client.aclose()` may not exist; MCP server commands are cwd-relative (`src/*_server.py`); table-token swap-back can splice markup into an attribute (`[x](PAGILATABLETOKEN0)`, layout only) and http(s) links still allow click exfiltration; `db.py` does not URL-quote credentials (rag.py does); dead code (`_has_pending_interrupt`, `get_psycopg_pool`, `_reindex_task`, conftest `analytics_server._engine`) and CLAUDE.md says two MCP servers each with its own pool.
 Status: PARTIAL 2026-10-28. Done: `_has_pending_interrupt` removed. Left: OR-312 MCP per-call subprocess (needs venv check), OR-317, OR-318, OR-319, remaining dead code, CLAUDE.md MCP wording.
+
+## BG-042
+(RV-008 J1, high) `GET /rest/stores` and `/rest/stores/{id}` return the manager's `password` and `username`: `StoreMapper.storeToInfo` (data-hibernate `StoreMapper.java:31-34`) maps `Store.manager` to `StaffInfo` (`core-api .../StaffInfo.java:15-16`), copying both from `Staff`. Same in data-ebean. Fix: drop the fields from `StaffInfo`, or `@Mapping(ignore=true)` / `@JsonIgnore`.
+Status: OPEN
+
+## BG-043
+(RV-008 J2/J3/J12, high) `database/schema.sql`: (a) `CREATE OR REPLACE VIEW` for `film_list`/`nicer_but_slower_film_list` (:18-56) puts `rating_txt` before `actors`, which fails on a fresh base Pagila DB ("cannot change name of view column"), and `psql -f` without `ON_ERROR_STOP` leaves the DB half-patched (`film_rating_facet` :133 then fails); (b) `rating_txt` (:10-16) defaults to `''` and is backfilled once, never kept in sync, so Ebean `FilmRating` throws on `''` and Hibernate `FilmRatingType.java:39-42` silently maps null/`''` to `NR` (not a valid `mpaa_rating`); (c) `store_customer_view` (:118) `COUNT(r.rental_id)` inflated by multi-payment rentals, and `film_price_facet` (:140-142) `BETWEEN` ranges overlap at 1 and 3. Fix: drop/recreate views or append `rating_txt` last, `-v ON_ERROR_STOP=1`, BEFORE INSERT OR UPDATE OF rating trigger, `COUNT(DISTINCT ...)`, non-overlapping ranges.
+Status: OPEN
+
+## BG-044
+(RV-008 J4/J5/J6/J8, med) Java persistence: `JPARepository.page`/`pageOffset`/`findById` (:55-65, :80) never apply `getLoadFields()`, so `/rest/films` and `/ui/films` cost 1+N category selects (fix `@BatchSize(50)` or fetch joins); `@Transactional` on `JPARepository` (:48,61) is inert because `RepositoryProducers` builds repositories with `new`, so list and count run as separate autocommit reads; inverse `Address.store` `@OneToOne` can't be proxied (extra query per address, throws if two stores share an address); `PageInfo.java:6` `(page-1)*size` int overflow gives a negative offset and a 500 (`FiqlQueryBean.pageInfo()` :34 does not cap `page`).
+Status: OPEN
+
+## BG-045
+(RV-008 J7/J9, med) Build/config: root `pom.xml:72-196` pins hibernate-core 7.4.7.Final, postgresql, jackson-jsr310, junit and mockito in the parent `dependencyManagement`, which overrides the Quarkus BOM for `quarkus-htmx` (local `~/.m2` has quarkus-bom 3.40.1.1 pinning 7.4.9; the 3.39.3 BOM and hibernate 7.4.7 are not present, so the pins are probably stale; confirm with `dep-inspect`); `quarkus-htmx/.../application.yml:15-16,29-30` logs `org.hibernate.SQL` at DEBUG with `bind-parameters: true` in every profile, so emails and names reach the logs (prefix with `%dev.`).
+Status: OPEN
+
+## BG-046
+(RV-008 J10/J11/J13/J14, low) Java misc: only the JPA path coerces filter values (`JPAQueryParser.java:84`); Ebean `EbeanQueryParser.java:64` binds raw strings (unverified); `lt`/`gt` on strings not rejected; the rating facet returns `PG-13` but `rating==PG-13` goes through `Enum.valueOf` (`PG13`) and 400s; `direction` param accepted but dropped by `FiqlQueryBean.pageInfo()`; Ebean `Staff` has no raw `addressId` so `StaffInfo.addressId` is null; data-loader: `ActorLoader.java:33-34` one transaction per 200-row batch (partial rows on failure, count not printed), `DataLoaderApp.java:31-32` bad `--count`/`--seed` throws `NumberFormatException` with no upper bound, `DatabaseBootstrap.java:31` never closes datasource; `NPlusOneFilmActorsDemo.java:38-40,49-51` hard-codes "1 + N" / "1 round trip" instead of counting queries (Ebean batches lazy loads).
+Status: OPEN
+
+## BG-047
+(RV-008 U1/U2/U3/B11, med) genai access control: no `TrustedHostMiddleware` (`main.py:89-100`), so DNS rebinding counts as same-origin and can read `/sessions` (histories incl. customer emails), approve pending tools and DELETE; no thread ownership (`sessions.py:7-32`, `session_list.html:5-13`, `ui_routes.py:96-106` accepts any `?thread_id=`, so session fixation; `user_id` is client-chosen), consistent with the BG-019 "unauthenticated by design" decision but reachable from other local pages; `POST /admin/reindex` (`main.py:412`) takes no body, so a cross-site form triggers a full re-embed; `models.py:12` default `thread_id="default"` is shared by all clients omitting it. Fix: allowed hosts, owner stored on first write plus server-issued cookie, require JSON body or custom header/`Origin` check, require or uuid thread_id.
+Status: OPEN
+
+## BG-048
+(RV-008 B1/B2/B4/B12, med) genai runtime: MCP children (`agent.py:631-647`) run `uv run <abs path>` from the server cwd (only `genai-assistant/` has a `pyproject.toml`, so launching from the repo root or an OpenShift workdir fails) and don't inherit `DB_*` env, silently falling back to localhost/password (fix `cwd` + `env`, or `sys.executable`); `main.py:78-80` `mcp_client.aclose()` probably doesn't exist in langchain-mcp-adapters 0.2.2 so shutdown raises before `close_pools()`, and tools probably spawn a subprocess/engine/pool and reload FastEmbed per call (unverified, venv unreadable; hold sessions with `AsyncExitStack`, `try/finally` around close); single-worker guard (`main.py:41-49`) misses `--workers N` / `gunicorn -w` (use a Postgres advisory lock); no cleanup if `init_psycopg_pool`/`build_agent` raise at startup (`main.py:70-73`). Supersedes the open OR-312 part of BG-041.
+Status: OPEN
+
+## BG-049
+(RV-008 B3/B5-B10/B13-B15, low-med) genai flow: session delete doesn't hold the thread lock (`main.py:451-459`, `ui_routes.py:145-152`; checkpoint rows deleted while a run writes); `/chat` has no timeout (`main.py:223-240`); the `RUN_TIMEOUT_S` cancel (`main.py:275`) can interrupt a tool mid-run (safe only while all tools are read-only; document the idempotence invariant); `confirm_id` hashes only call id/name/args, not the interrupt id (`main.py:131-134`) and `ConfirmRequest.confirm_id` is optional (`models.py:69`; missing id gives 409 not 422, overlaps BG-040 OR-307); `db.py:23-30` `_pg_conninfo` not escaped (use `make_conninfo`); `agent.py:530-546` `load_prefs` not best-effort; `/chat` answer 500s on list content (`main.py:245`); analytics counts inflated by join fan-out (`analytics_queries.py:13,72`, `store_server.py:162`); `sessions.py:10-21` `list_sessions` unbounded.
+Status: OPEN
+
+## BG-050
+(RV-008 U4/U12/U13/U14, low-med) chat UI: table placeholder swap (`chat.js:158-161`, `ui_routes.py:90-92`) interprets `$&` in cells, `TOKEN1` collides inside `TOKEN10`, and the token is fixed and public so model/data text can inject it (layout only, cells are escaped; use a per-render nonce with terminator and a function replacer); `confirmTool` catch (`chat.js:356-361`) ignores `err.pending`, re-enabling input while the new card shows; non-string token content renders "[object Object]" (`chat.js:202-204`, server forwards at `main.py:316`); draft bubble left raw on `tool_confirm` (`chat.js:218-220`); dead `USER_ID = ""` (`chat.html:17`). Supersedes the table-token part of BG-041 OR-317.
+Status: OPEN
+
+## BG-051
+(RV-008 A1-A6/A10, high) ui-angular: `films.service.ts:31-33` `getFilmById` returns the raw body but `FilmsResource.java:76` wraps it in `ApiResult.single`, so film detail renders blank (e2e mock `mocks.ts:72-87` is unwrapped and hides it); `resource.value()` is read while in error state (probably throws `ResourceValueError`, unverified: node_modules grep denied) in home/list/sales/staff/card components (use `hasValue()`; the e2e error test listens to `pageerror` only, not console errors); sales, staff and home have no error branch; `films/card` and `stores/card` return `EMPTY` for a bad id instead of `throwError`; toolbar links use `href` (full reload, use `routerLink`); backend URLs hardcoded in `shared/common.ts:2,4` (use environment files or a proxy); list `total` is not reset on error.
+Status: OPEN
+
+## BG-052
+(RV-008 A9/A13-A15, low) Repo hygiene and go-web: `go-web/web/server.go:19` `r.Run` has no server timeouts, listens on all interfaces and ignores the error (exits 0 if the port is taken); `go.mod` marks direct deps `// indirect`, unused `go-pg`, old `x/net` v0.31 and `x/crypto` v0.29, `config.yaml` unused, `main.go:12` exits silently without `-http`, and CLAUDE.md's "minimal REST API" description does not match the code; `ui-angular/playwright-report/index.html` is tracked (`git rm --cached`, add `playwright-report/` and `test-results/` to `.gitignore`); untracked `spring-vaadin/` is residue of the removed module (generated frontend only, no secrets) and untracked `packages.microsoft.gpg` is a stray apt key; neither should be committed.
+Status: OPEN

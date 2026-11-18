@@ -5,7 +5,20 @@
 - PARTIAL: soft guards: done: JSON delete 409 while running, chat.js keeps input disabled with the card and restores it after a closed stream / left: require confirm_id (OR-307), /chat lock re-check and answer drop (OR-316) (see findings/bugs.md#BG-040) | logged: 2026-10-28 | started: 2026-10-28 | closed: -
 - PARTIAL: misc: done: dead `_has_pending_interrupt` removed / left: MCP per-call subprocess and aclose check (OR-312), absolute MCP paths, table-token splice, db.py credential quoting, other dead code, CLAUDE.md MCP wording (see findings/bugs.md#BG-041) | logged: 2026-10-28 | started: 2026-10-28 | closed: -
 
+## PENDING
+- PENDING: stop leaking the store manager's password and username in StaffInfo (core-api, both ORMs) (see findings/bugs.md#BG-042) | logged: 2026-11-18 | started: - | closed: -
+- PENDING: schema.sql: fresh-DB view failure, rating_txt sync trigger, view aggregates, ON_ERROR_STOP (see findings/bugs.md#BG-043) | logged: 2026-11-18 | started: - | closed: -
+- PENDING: genai access control: TrustedHost, thread ownership, reindex CSRF, default thread_id (see findings/bugs.md#BG-047) | logged: 2026-11-18 | started: - | closed: -
+- PENDING: ui-angular: film detail ApiResult unwrap, resource.value() in error state, error branches, EMPTY ids, toolbar routerLink, hardcoded URLs (see findings/bugs.md#BG-051) | logged: 2026-11-18 | started: - | closed: -
+
 ## BACKLOG
+- BACKLOG: Java persistence: films N+1, inert @Transactional, Address.store inverse one-to-one, paging overflow 500 (see findings/bugs.md#BG-044) | logged: 2026-11-18 | started: - | closed: -
+- BACKLOG: build/config: parent pom pins override the Quarkus BOM, SQL bind-parameter logging outside %dev (see findings/bugs.md#BG-045) | logged: 2026-11-18 | started: - | closed: -
+- BACKLOG: Java misc: filter coercion parity, direction param, data-loader safety, N+1 demo numbers, Ebean Staff addressId (see findings/bugs.md#BG-046) | logged: 2026-11-18 | started: - | closed: -
+- BACKLOG: genai runtime: MCP cwd/env, per-call subprocess and aclose check, startup cleanup, multi-worker advisory lock (see findings/bugs.md#BG-048) | logged: 2026-11-18 | started: - | closed: -
+- BACKLOG: genai flow: delete under lock, /chat timeout, confirm_id interrupt binding and required, conninfo escape, load_prefs, analytics fan-out, list_sessions limit (see findings/bugs.md#BG-049) | logged: 2026-11-18 | started: - | closed: -
+- BACKLOG: chat UI: table placeholder nonce, stale-confirm input state, non-string tokens, leftovers (see findings/bugs.md#BG-050) | logged: 2026-11-18 | started: - | closed: -
+- BACKLOG: repo hygiene and go-web: server timeouts, go.mod tidy, tracked playwright-report, stray spring-vaadin and gpg key (see findings/bugs.md#BG-052) | logged: 2026-11-18 | started: - | closed: -
 - BACKLOG: apply database/schema.sql to the local DB and verify (language DO block, user_preferences store FK NOT VALID) (see findings/bugs.md#BG-034) | logged: 2026-10-28 | started: - | closed: -
 - BACKLOG: decide or WONT-DO the low-value skips from BG-021 (film.rating cast, `;` in filter values, user_preferences owner/migration) and give RV-004 OR-006/OR-012 (provider message-ordering, plausible only) a disposition (see findings/bugs.md#BG-036) | logged: 2026-10-28 | started: - | closed: -
 

@@ -6,6 +6,9 @@
 - BACKLOG: data-loader tests: ActorLoader determinism, CLI argument errors, additive load (see findings/tests.md#TS-005) | logged: 2026-10-28 | started: - | closed: -
 - BACKLOG: go-web tests or a smoke test, plus a short README (see findings/tests.md#TS-006) | logged: 2026-10-28 | started: - | closed: -
 
+- BACKLOG: genai test quality: assert approve/reject resume, under-lock branches, timeout path, de-flake disconnect test, fix vacuous assertions, UI route tests (see findings/tests.md#TS-007) | logged: 2026-11-18 | started: - | closed: -
+- BACKLOG: frontend e2e: chat.js SSE Playwright spec, error-state and pagination test reliability, Playwright webServer/trace config (see findings/tests.md#TS-008) | logged: 2026-11-18 | started: - | closed: -
+
 ## DONE
 - DONE: DB-backed genai tool tests rerun after the BG-027 change: 102 passed (film, store, actor, rental, analytics, mcp) (see findings/tests.md#TS-003) | logged: 2026-10-28 | started: 2026-10-28 | closed: 2026-10-28
 - DONE: confirm quarkus-htmx review on JDK 25: mvn and java are Temurin 25.0.3, enforcer requireJavaVersion=25 (see findings/tests.md#TS-001) | logged: 2026-10-26 | started: 2026-10-26 | closed: 2026-10-26
